@@ -7,6 +7,22 @@ EXEC_PATH=""
 MAIN_PATH="$APP_PATH/main.js"
 ICON_PATH="$APP_PATH/resources/app/icon.png"
 
+# Color codes for professional output
+ORANGE='\033[0;33m'
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
+
+echo -e "${ORANGE}${BOLD}"
+echo "  ██████╗██████╗ ██╗   ██╗███╗   ██╗ ██████╗██╗  ██╗██╗   ██╗██████╗  ██████╗ ██╗     ██╗     "
+echo " ██╔════╝██╔══██╗██║   ██║████╗  ██║██╔════╝██║  ██║╚██╗ ██╔╝██╔══██╗██╔═══██╗██║     ██║     "
+echo " ██║     ██████╔╝██║   ██║██╔██╗ ██║██║     ███████║ ╚████╔╝ ██████╔╝██║   ██║██║     ██║     "
+echo " ██║     ██╔══██╗██║   ██║██║╚██╗██║██║     ██╔══██║  ╚██╔╝  ██╔══██╗██║   ██║██║     ██║     "
+echo " ╚██████╗██║  ██║╚██████╔╝██║ ╚████║╚██████╗██║  ██║   ██║   ██║  ██║╚██████╔╝███████╗███████╗"
+echo "  ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝"
+echo -e "${CYAN}                     Cross-Platform Anime Desktop Client Setup${NC}\n"
+
 # Detect executable (custom electron binary, local node_modules, or system electron)
 if [ -f "$APP_PATH/electron-widevine/electron" ]; then
   EXEC_PATH="$APP_PATH/electron-widevine/electron"
@@ -19,7 +35,7 @@ elif [ -f "$APP_PATH/dist/crunchyroll-desktop" ]; then
 fi
 
 if [ -z "$EXEC_PATH" ] || [ ! -f "$MAIN_PATH" ]; then
-  echo "⚠️  Note: Make sure to run 'npm install' or extract the packaged release before running install.sh."
+  echo -e "⚠️  ${ORANGE}Note: Make sure to run 'npm install' or extract the packaged release before running install.sh.${NC}"
 fi
 
 # Handle Uninstallation

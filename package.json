@@ -52,6 +52,16 @@
       ],
       "icon": "resources/app/icon.png"
     },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Crunchyroll",
+      "runAfterFinish": true,
+      "menuCategory": true,
+      "deleteAppDataOnUninstall": false
+    },
     "mac": {
       "target": [
         "dmg",
@@ -59,6 +69,27 @@
       ],
       "category": "public.app-category.entertainment",
       "icon": "resources/app/icon.png"
+    },
+    "dmg": {
+      "title": "Crunchyroll Installer",
+      "iconSize": 120,
+      "contents": [
+        {
+          "x": 130,
+          "y": 170,
+          "type": "file"
+        },
+        {
+          "x": 410,
+          "y": 170,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 360
+      }
     },
     "publish": {
       "provider": "github",

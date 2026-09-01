@@ -123,6 +123,133 @@ const customStyles = `
   .cr-toggle-handle:hover {
     color: var(--cr-accent);
   }
+  /* Modal & Setup Wizard */
+  #cr-setup-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    z-index: 2147483647;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    animation: crFadeIn 0.2s ease;
+  }
+
+  @keyframes crFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .cr-modal-card {
+    background: var(--cr-bg);
+    color: var(--cr-text);
+    border: 1px solid var(--cr-border);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 520px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--cr-border);
+    overflow: hidden;
+  }
+
+  .cr-modal-header {
+    padding: 24px 24px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--cr-border);
+  }
+
+  .cr-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--cr-text);
+  }
+
+  .cr-modal-title img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .cr-modal-close {
+    background: transparent;
+    border: none;
+    color: var(--cr-text-dim);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 6px;
+  }
+  .cr-modal-close:hover {
+    color: var(--cr-text);
+    background: var(--cr-bg-alt);
+  }
+
+  .cr-modal-body {
+    padding: 20px 24px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .cr-setup-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--cr-border);
+  }
+
+  .cr-setup-info h4 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .cr-setup-info p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--cr-text-dim);
+  }
+
+  .cr-shortcut-pill {
+    background: var(--cr-bg-alt);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--cr-border);
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--cr-accent);
+  }
+
+  .cr-modal-footer {
+    padding: 16px 24px;
+    background: var(--cr-bg-alt);
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid var(--cr-border);
+  }
+
+  .cr-primary-btn {
+    background: var(--cr-accent);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .cr-primary-btn:hover {
+    background: var(--cr-accent-hover);
+  }
 `;
 
 // Initialize Theme
@@ -154,6 +281,102 @@ function injectStyles() {
   (document.head || document.documentElement).appendChild(styleEl);
 }
 
+// Open Setup / Welcome Wizard Modal
+function openSetupModal() {
+  if (document.getElementById('cr-setup-modal-overlay')) return;
+
+  const modal = document.createElement('div');
+  modal.id = 'cr-setup-modal-overlay';
+  modal.innerHTML = `
+    <div class="cr-modal-card">
+      <div class="cr-modal-header">
+        <div class="cr-modal-title">
+          <span>🎬</span>
+          <span>Crunchyroll Desktop Setup</span>
+        </div>
+        <button class="cr-modal-close" id="cr-modal-close-btn">✕</button>
+      </div>
+
+      <div class="cr-modal-body">
+        <div class="cr-setup-row">
+          <div class="cr-setup-info">
+            <h4>Widevine DRM Engine</h4>
+            <p>Hardware-accelerated media decryption</p>
+          </div>
+          <span style="color: #28a745; font-weight: 600; font-size: 13px;">● Active & Ready</span>
+        </div>
+
+        <div class="cr-setup-row">
+          <div class="cr-setup-info">
+            <h4>Auto-Skip Intros & Recaps</h4>
+            <p>Automatically click skip prompts during playback</p>
+          </div>
+          <button class="cr-btn ${autoSkipEnabled ? 'active' : ''}" id="cr-modal-skip-toggle">
+            ${autoSkipEnabled ? 'Enabled' : 'Disabled'}
+          </button>
+        </div>
+
+        <div class="cr-setup-row">
+          <div class="cr-setup-info">
+            <h4>Device Theme Sync</h4>
+            <p>Match OS Dark and Light mode automatically</p>
+          </div>
+          <button class="cr-btn" id="cr-modal-theme-toggle">
+            ${currentTheme === 'dark' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+          </button>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <h4 style="margin: 0 0 10px 0; font-size: 13px; color: var(--cr-text-dim);">KEYBOARD SHORTCUTS</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+            <div><span class="cr-shortcut-pill">[</span> / <span class="cr-shortcut-pill">]</span> Adjust Speed</div>
+            <div><span class="cr-shortcut-pill">P</span> Picture-in-Picture</div>
+            <div><span class="cr-shortcut-pill">Space</span> Play / Pause</div>
+            <div><span class="cr-shortcut-pill">F</span> Fullscreen</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cr-modal-footer">
+        <button class="cr-primary-btn" id="cr-modal-done-btn">Save & Start Watching</button>
+      </div>
+    </div>
+  `;
+
+  (document.body || document.documentElement).appendChild(modal);
+
+  // Close logic
+  const closeModal = () => {
+    localStorage.setItem('cr_setup_completed_v1', 'true');
+    modal.remove();
+  };
+
+  document.getElementById('cr-modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('cr-modal-done-btn').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // Modal Toggles
+  const modalSkipBtn = document.getElementById('cr-modal-skip-toggle');
+  modalSkipBtn.addEventListener('click', () => {
+    autoSkipEnabled = !autoSkipEnabled;
+    modalSkipBtn.innerHTML = autoSkipEnabled ? 'Enabled' : 'Disabled';
+    modalSkipBtn.classList.toggle('active', autoSkipEnabled);
+    const barSkipBtn = document.getElementById('cr-auto-skip-btn');
+    if (barSkipBtn) {
+      barSkipBtn.innerHTML = autoSkipEnabled ? '⚡ Skip: ON' : '⚡ Skip: OFF';
+      barSkipBtn.classList.toggle('active', autoSkipEnabled);
+    }
+  });
+
+  const modalThemeBtn = document.getElementById('cr-modal-theme-toggle');
+  modalThemeBtn.addEventListener('click', () => {
+    applyTheme(currentTheme !== 'dark');
+    modalThemeBtn.innerHTML = currentTheme === 'dark' ? '🌙 Dark Mode' : '☀️ Light Mode';
+  });
+}
+
 // Create and Inject the App Bar
 function createAppBar() {
   if (document.getElementById('cr-app-bar')) return;
@@ -182,6 +405,7 @@ function createAppBar() {
       <button class="cr-btn" id="cr-speed-btn" title="Cycle Playback Speed">⏩ 1.0x</button>
       <button class="cr-btn" id="cr-pip-btn" title="Toggle Picture-in-Picture">📺 PiP</button>
       <button class="cr-btn" id="cr-theme-btn" title="System Theme">${currentTheme === 'dark' ? '🌙 Dark' : '☀️ Light'}</button>
+      <button class="cr-btn" id="cr-settings-btn" title="Quick Setup & Preferences">⚙️</button>
     </div>
 
     <!-- Collapse / Expand Handle -->
@@ -189,6 +413,14 @@ function createAppBar() {
   `;
 
   (document.body || document.documentElement).appendChild(bar);
+
+  // Hook Settings Button
+  document.getElementById('cr-settings-btn').addEventListener('click', openSetupModal);
+
+  // Check First Run Setup
+  if (localStorage.getItem('cr_setup_completed_v1') !== 'true') {
+    setTimeout(openSetupModal, 800);
+  }
 
   // Hook Navigation buttons
   document.getElementById('cr-nav-back').addEventListener('click', () => ipcRenderer.send('nav-back'));
