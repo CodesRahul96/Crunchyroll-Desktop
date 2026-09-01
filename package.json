@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "An unofficial cross-platform Crunchyroll desktop application for Linux, Windows, and macOS with Widevine DRM support",
   "main": "main.js",
-  "author": "CodesRahul96",
+  "author": "CodesRahul96 <codesrahul96@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -37,6 +37,7 @@
       "resources/**/*"
     ],
     "linux": {
+      "maintainer": "CodesRahul96 <codesrahul96@gmail.com>",
       "target": [
         "AppImage",
         "deb"
