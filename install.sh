@@ -22,6 +22,32 @@ if [ -z "$EXEC_PATH" ] || [ ! -f "$MAIN_PATH" ]; then
   echo "⚠️  Note: Make sure to run 'npm install' or extract the packaged release before running install.sh."
 fi
 
+# Handle Uninstallation
+if [ "$1" == "--uninstall" ] || [ "$1" == "-u" ]; then
+  echo "🧹 Removing Crunchyroll desktop entries and icons..."
+  rm -f "$HOME/.local/share/applications/crunchyroll.desktop"
+  rm -f "$HOME/.local/share/applications/crunchyroll-desktop.desktop"
+  rm -f "$HOME/.local/share/icons/hicolor/512x512/apps/crunchyroll.png"
+  if [ -w "/usr/share/applications" ] || [ "$EUID" -eq 0 ]; then
+    rm -f "/usr/share/applications/crunchyroll.desktop"
+    rm -f "/usr/share/applications/crunchyroll-desktop.desktop"
+    rm -f "/usr/share/icons/hicolor/512x512/apps/crunchyroll.png"
+  fi
+  update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+  gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+  echo "✅ Crunchyroll uninstalled cleanly."
+  exit 0
+fi
+
+# Handle Cache/Conflict Cleanup
+if [ "$1" == "--clean" ] || [ "$1" == "--repair" ]; then
+  echo "🔧 Resetting application cache and resolving conflict locks..."
+  rm -f "$HOME/.config/Crunchyroll/SingletonLock" 2>/dev/null || true
+  rm -rf "$HOME/.config/Crunchyroll/Cache" 2>/dev/null || true
+  rm -rf "$HOME/.config/Crunchyroll/Code Cache" 2>/dev/null || true
+  echo "✅ Stale session locks and caches cleared."
+fi
+
 # Clean up any obsolete desktop entries
 rm -f "$HOME/.local/share/applications/crunchyroll-desktop.desktop"
 
