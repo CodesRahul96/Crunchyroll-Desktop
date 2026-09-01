@@ -3,29 +3,58 @@
 set -e
 
 APP_PATH="$(pwd)"
-EXEC_PATH="$APP_PATH/electron-widevine/electron"
+EXEC_PATH=""
 MAIN_PATH="$APP_PATH/main.js"
 ICON_PATH="$APP_PATH/resources/app/icon.png"
-DESKTOP_FILE="/usr/share/applications/crunchyroll.desktop"
 
-if [ ! -f "$EXEC_PATH" ] || [ ! -f "$MAIN_PATH" ] || [ ! -f "$ICON_PATH" ]; then
-  echo "Missing required files. Make sure you're inside the extracted Crunchyroll folder."
-  exit 1
+# Detect executable (custom electron binary or system electron)
+if [ -f "$APP_PATH/electron-widevine/electron" ]; then
+  EXEC_PATH="$APP_PATH/electron-widevine/electron"
+elif command -v electron &> /dev/null; then
+  EXEC_PATH="$(command -v electron)"
+elif [ -f "$APP_PATH/dist/crunchyroll-desktop" ]; then
+  EXEC_PATH="$APP_PATH/dist/crunchyroll-desktop"
 fi
 
-echo "Creating desktop entry..."
+if [ -z "$EXEC_PATH" ] || [ ! -f "$MAIN_PATH" ]; then
+  echo "⚠️  Note: Make sure to run 'npm install' or extract the packaged release before running install.sh."
+fi
 
-sudo tee "$DESKTOP_FILE" > /dev/null <<EOF
+# Choose install target: User-level (~/.local/share/applications) or System-wide (/usr/share/applications)
+if [ "$1" == "--system" ]; then
+  DESKTOP_DIR="/usr/share/applications"
+  DESKTOP_FILE="$DESKTOP_DIR/crunchyroll-desktop.desktop"
+  echo "Installing system-wide to $DESKTOP_FILE..."
+  sudo tee "$DESKTOP_FILE" > /dev/null <<EOF
 [Desktop Entry]
-Name=Crunchyroll
-Exec=$EXEC_PATH $MAIN_PATH
+Name=Crunchyroll Desktop
+Exec=${EXEC_PATH:-electron} $MAIN_PATH
 Icon=$ICON_PATH
 Terminal=false
 Type=Application
-Categories=Video;Entertainment;
-Comment=Crunchyroll Web App
+Categories=AudioVideo;Video;Player;
+Comment=Unofficial Crunchyroll Desktop Client
+StartupWMClass=crunchyroll-desktop
 EOF
+  sudo update-desktop-database /usr/share/applications 2>/dev/null || true
+else
+  DESKTOP_DIR="$HOME/.local/share/applications"
+  mkdir -p "$DESKTOP_DIR"
+  DESKTOP_FILE="$DESKTOP_DIR/crunchyroll-desktop.desktop"
+  echo "Installing for current user to $DESKTOP_FILE..."
+  tee "$DESKTOP_FILE" > /dev/null <<EOF
+[Desktop Entry]
+Name=Crunchyroll Desktop
+Exec=${EXEC_PATH:-electron} $MAIN_PATH
+Icon=$ICON_PATH
+Terminal=false
+Type=Application
+Categories=AudioVideo;Video;Player;
+Comment=Unofficial Crunchyroll Desktop Client
+StartupWMClass=crunchyroll-desktop
+EOF
+  update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
+fi
 
-sudo update-desktop-database /usr/share/applications
+echo "✅ Crunchyroll Desktop shortcut installed successfully! Find it in your Application Menu."
 
-echo "Crunchyroll App shortcut created. Find it in your Application Menu."

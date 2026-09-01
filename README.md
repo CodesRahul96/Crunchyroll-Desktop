@@ -1,47 +1,97 @@
-<h1 align="center">Crunchyroll Unofficial</h1>
+<h1 align="center">Crunchyroll Desktop</h1>
 <p align="center">
-  <strong>An unofficial Crunchyroll app for Linux</strong> <img src="https://github.com/user-attachments/assets/8acc53a4-be94-4840-8c9f-64a29a57f271" width="30" height="30" alt="emoji">
-</p>
-
-<h2 align="center">Disclaimer</h2>
-<p align="center">
-  This is an unofficial application and is not associated with or endorsed by Crunchyroll, LLC. The app is an Electron wrapper created for personal use only. All content, trademarks, and logos are the property of their respective owners. Use of this app is for personal purposes only and not for commercial distribution.
+  <strong>An unofficial cross-platform Crunchyroll desktop app for Linux, Windows, and macOS</strong> 🎬
 </p>
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/ea95a1f5-0b14-44eb-bc14-8e8eff5f38fa"
-alt="App Screenshot" style="max-width: 100%; height: auto;">
+  <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20macOS-blue?style=flat-square" alt="Platform">
+  <img src="https://img.shields.io/badge/DRM-Widevine%20Supported-green?style=flat-square" alt="DRM">
+  <img src="https://img.shields.io/badge/License-MIT-orange?style=flat-square" alt="License">
 </p>
 
+---
 
-<h2 align="center">Release Note</h2>
+## ⚡ Features
 
-This release includes a custom-compiled Electron binary bundled with **Widevine CDM**, enabling full DRM support out-of-the-box — something most PWAs (Progressive Web Apps) often struggle with on Linux platforms, especially for streaming services like Crunchyroll.
+- 🌐 **Cross-Platform Support**: Seamless experience across **Linux** (AppImage, Deb), **Windows** (Installer & Portable .exe), and **macOS** (DMG & Zip).
+- 🔓 **Widevine DRM Support**: DRM media playback supported out-of-the-box.
+- ⚡ **Enhanced Video Controls**:
+  - `[` / `]`: Adjust playback speed dynamically in 0.25x increments with on-screen indicator.
+  - `P`: Toggle Picture-in-Picture (PiP) mode on the active video.
+  - Auto-skip Intro and Recap buttons.
+- 💤 **Power-Save Blocker**: Automatically prevents system display sleep or screensavers while watching episodes.
+- 🔒 **Security & Sandboxing**: Context isolation, sandboxed processes, and secure external URL handling (external links automatically open in your default browser).
+- 🎨 **Clean UI**: Custom dark-mode scrollbars with a distraction-free window.
 
-The source code is provided in a raw, unbundled form, allowing you to **customize the app to your liking**. While it's currently a lightweight wrapper around the Crunchyroll website, it comes with a few practical enhancements that make it a more stable and native alternative to standard browser-based experiences.
+---
 
-Enjoy seamless playback and a more integrated desktop feel — without the usual DRM headaches.
+## ⌨️ Player Shortcuts
 
+| Shortcut | Action |
+| :--- | :--- |
+| `[` | Decrease playback speed (down to 0.25x) |
+| `]` | Increase playback speed (up to 3.0x) |
+| `P` | Toggle Picture-in-Picture (PiP) |
+| `Space` / `K` | Play / Pause |
+| `F` | Fullscreen |
+| `M` | Mute / Unmute |
 
-<h2 align="center">Installation</h2>
+---
 
-Download the ```.zip``` file from the ```Releases``` section and unzip it in your pc.
+## 📦 Installation & Download
 
-OR
+### 🐧 Linux
+1. Download the latest `.AppImage` or `.deb` from the [Releases](https://github.com/CodesRahul96/Crunchyroll-Desktop/releases) section.
+2. For AppImage:
+   ```bash
+   chmod +x Crunchyroll-Desktop-*.AppImage
+   ./Crunchyroll-Desktop-*.AppImage
+   ```
+3. Or install the desktop shortcut using the provided script:
+   ```bash
+   chmod +x install.sh
+   ./install.sh
+   ```
 
-Use the following command:
+### 🪟 Windows
+1. Download the latest `Crunchyroll-Desktop-Setup.exe` from [Releases](https://github.com/CodesRahul96/Crunchyroll-Desktop/releases).
+2. Run the installer and launch from your Start Menu.
+
+### 🍏 macOS
+1. Download the `.dmg` from [Releases](https://github.com/CodesRahul96/Crunchyroll-Desktop/releases).
+2. Open the DMG and drag `Crunchyroll Desktop` to your `Applications` folder.
+
+---
+
+## 🛠️ Building From Source
+
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v18 or higher recommended)
+- `npm`
+
+### Steps
 ```bash
-sudo apt update && sudo apt upgrade -y && sudo apt install wget unzip -y
-# Download and extract the release package
-unzip crunchyroll-linux-x64.zip
-cd crunchyroll-linux-x64
+# 1. Clone the repository
+git clone https://github.com/CodesRahul96/Crunchyroll-Desktop.git
+cd Crunchyroll-Desktop
+
+# 2. Install dependencies
+npm install
+
+# 3. Run in development mode
+npm start
+
+# 4. Build for your current platform
+npm run dist
+
+# Or build for specific targets:
+npm run build:linux  # Generates AppImage & .deb in /dist
+npm run build:win    # Generates .exe in /dist
+npm run build:mac    # Generates .dmg in /dist
 ```
 
-<strong> Once inside the project folder, you can install the app using: </strong>
-```bash
-chmod +x install.sh
-./install.sh
-```
+---
 
-Now you should have your Crunchyroll App in your system which you can access from the Application Menu.
+## ⚠️ Disclaimer
+This is an unofficial application and is not affiliated with or endorsed by Crunchyroll, LLC. All content, trademarks, and logos are the property of their respective owners.
 

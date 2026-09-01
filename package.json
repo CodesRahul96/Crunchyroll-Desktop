@@ -1,20 +1,63 @@
 {
-  "name": "crunchyroll-linux",
+  "name": "crunchyroll-desktop",
+  "productName": "Crunchyroll Desktop",
   "version": "1.0.0",
-  "description": "An unofficial Crunchyroll desktop application for Linux with Widevine DRM support",
+  "description": "An unofficial cross-platform Crunchyroll desktop application for Linux, Windows, and macOS with Widevine DRM support",
   "main": "main.js",
   "author": "CodesRahul96",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/CodesRahul96/Crunchyroll_Linux.git"
+    "url": "https://github.com/CodesRahul96/Crunchyroll-Desktop.git"
   },
   "scripts": {
-    "start": "./electron-widevine/electron .",
-    "dist": "electron-packager . crunchyroll --platform=linux --arch=x64 --out=./dist --overwrite --icon=./resources/app/icon.png --electron-binary=./electron-widevine/electron --electron-version=35.1.5"
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "build:linux": "electron-builder --linux",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:all": "electron-builder -mwl"
   },
   "dependencies": {},
   "devDependencies": {
-    "electron-packager": "^15.5.0"
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.codesrahul.crunchyroll",
+    "productName": "Crunchyroll Desktop",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "resources/**/*"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Video;Entertainment;",
+      "icon": "resources/app/icon.png"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "resources/app/icon.png"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.entertainment",
+      "icon": "resources/app/icon.png"
+    }
   }
 }
