@@ -7,9 +7,11 @@ EXEC_PATH=""
 MAIN_PATH="$APP_PATH/main.js"
 ICON_PATH="$APP_PATH/resources/app/icon.png"
 
-# Detect executable (custom electron binary or system electron)
+# Detect executable (custom electron binary, local node_modules, or system electron)
 if [ -f "$APP_PATH/electron-widevine/electron" ]; then
   EXEC_PATH="$APP_PATH/electron-widevine/electron"
+elif [ -f "$APP_PATH/node_modules/.bin/electron" ]; then
+  EXEC_PATH="$APP_PATH/node_modules/.bin/electron"
 elif command -v electron &> /dev/null; then
   EXEC_PATH="$(command -v electron)"
 elif [ -f "$APP_PATH/dist/crunchyroll-desktop" ]; then
