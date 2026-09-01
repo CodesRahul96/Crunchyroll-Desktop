@@ -34,7 +34,7 @@ if [ "$1" == "--system" ]; then
   sudo tee "$DESKTOP_FILE" > /dev/null <<EOF
 [Desktop Entry]
 Name=Crunchyroll
-Exec=${EXEC_PATH:-electron} $MAIN_PATH
+Exec=${EXEC_PATH:-electron} --no-sandbox $MAIN_PATH
 Icon=$ICON_PATH
 Terminal=false
 Type=Application
@@ -51,7 +51,7 @@ else
   tee "$DESKTOP_FILE" > /dev/null <<EOF
 [Desktop Entry]
 Name=Crunchyroll
-Exec=${EXEC_PATH:-electron} $MAIN_PATH
+Exec=${EXEC_PATH:-electron} --no-sandbox $MAIN_PATH
 Icon=$ICON_PATH
 Terminal=false
 Type=Application

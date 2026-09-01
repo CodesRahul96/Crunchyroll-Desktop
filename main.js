@@ -11,12 +11,13 @@ if (!gotTheLock) {
 let mainWindow = null;
 let powerSaveBlockerId = null;
 
-// Configure Widevine CDM dynamically if local directory exists
-const localWidevinePath = path.join(__dirname, 'WidevineCdm');
-if (fs.existsSync(localWidevinePath)) {
-  app.commandLine.appendSwitch('widevine-cdm-path', localWidevinePath);
-  app.commandLine.appendSwitch('widevine-cdm-version', '4.10.2891.0');
-}
+// Widevine CDM configuration for DRM streaming
+app.commandLine.appendSwitch('widevine-cdm-path', path.join(__dirname, 'WidevineCdm'));
+app.commandLine.appendSwitch('widevine-cdm-version', '4.10.2891.0');
+
+// Linux sandbox compatibility for NTFS/external drives
+app.commandLine.appendSwitch('no-sandbox');
+app.commandLine.appendSwitch('disable-gpu-sandbox');
 
 // Hardware acceleration and video decoding optimizations
 app.commandLine.appendSwitch('enable-gpu-rasterization');
@@ -47,8 +48,10 @@ function createWindow() {
     icon: getIconPath(),
     webPreferences: {
       plugins: true,
-      contextIsolation: true,
+      contextIsolation: false,
       nodeIntegration: false,
+      sandbox: false,
+      webSecurity: true,
       preload: path.join(__dirname, 'preload.js')
     }
   });
