@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -122,9 +122,63 @@ ipcMain.on('playback-state-change', (event, isPlaying) => {
   }
 });
 
+// Window Navigation & Control IPCs
+ipcMain.on('nav-back', () => {
+  if (mainWindow && mainWindow.webContents.canGoBack()) mainWindow.webContents.goBack();
+});
+
+ipcMain.on('nav-forward', () => {
+  if (mainWindow && mainWindow.webContents.canGoForward()) mainWindow.webContents.goForward();
+});
+
+ipcMain.on('nav-reload', () => {
+  if (mainWindow) mainWindow.webContents.reload();
+});
+
+ipcMain.on('nav-home', () => {
+  if (mainWindow) mainWindow.loadURL('https://www.crunchyroll.com');
+});
+
+ipcMain.on('nav-url', (event, url) => {
+  if (mainWindow) mainWindow.loadURL(url);
+});
+
+ipcMain.on('window-minimize', () => {
+  if (mainWindow) mainWindow.minimize();
+});
+
+ipcMain.on('window-maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+  }
+});
+
+ipcMain.on('window-close', () => {
+  if (mainWindow) mainWindow.close();
+});
+
+ipcMain.handle('get-theme-info', () => {
+  return {
+    shouldUseDarkColors: nativeTheme.shouldUseDarkColors,
+    shouldUseHighContrastColors: nativeTheme.shouldUseHighContrastColors
+  };
+});
+
 // App Lifecycle
 app.whenReady().then(() => {
+  nativeTheme.themeSource = 'system';
+  
   createWindow();
+
+  nativeTheme.on('updated', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('theme-changed', {
+        shouldUseDarkColors: nativeTheme.shouldUseDarkColors,
+        shouldUseHighContrastColors: nativeTheme.shouldUseHighContrastColors
+      });
+    }
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

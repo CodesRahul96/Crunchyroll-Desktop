@@ -1,7 +1,32 @@
 const { ipcRenderer } = require('electron');
 
-// Custom CSS Injection for sleek dark scrollbars
+let currentTheme = 'dark';
+let autoSkipEnabled = true;
+let isAppBarCollapsed = false;
+
+// Custom CSS Injection for sleek dark scrollbars & dynamic App Bar
 const customStyles = `
+  :root {
+    --cr-bg: #141519;
+    --cr-bg-alt: #23252b;
+    --cr-text: #ffffff;
+    --cr-text-dim: #a0a0a0;
+    --cr-border: rgba(255, 255, 255, 0.12);
+    --cr-accent: #ff6400;
+    --cr-accent-hover: #ff7e29;
+  }
+
+  [data-theme="light"] {
+    --cr-bg: #f5f6f8;
+    --cr-bg-alt: #ffffff;
+    --cr-text: #141519;
+    --cr-text-dim: #5a5d66;
+    --cr-border: rgba(0, 0, 0, 0.12);
+    --cr-accent: #ff6400;
+    --cr-accent-hover: #e55a00;
+  }
+
+  /* Custom Scrollbar */
   ::-webkit-scrollbar {
     width: 8px !important;
     height: 8px !important;
@@ -14,15 +39,220 @@ const customStyles = `
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.45) !important;
   }
+
+  /* App Bar Container */
+  #cr-app-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    background: var(--cr-bg);
+    color: var(--cr-text);
+    border-bottom: 1px solid var(--cr-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    box-sizing: border-box;
+    z-index: 2147483646;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    user-select: none;
+    transition: transform 0.25s ease, background 0.3s ease;
+    backdrop-filter: blur(12px);
+  }
+
+  #cr-app-bar.collapsed {
+    transform: translateY(-34px);
+  }
+
+  /* When fullscreen, hide App Bar completely */
+  :fullscreen #cr-app-bar,
+  :-webkit-full-screen #cr-app-bar {
+    display: none !important;
+  }
+
+  /* App Bar Sections */
+  .cr-bar-section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .cr-btn {
+    background: var(--cr-bg-alt);
+    color: var(--cr-text);
+    border: 1px solid var(--cr-border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+  }
+
+  .cr-btn:hover {
+    border-color: var(--cr-accent);
+    color: var(--cr-accent);
+  }
+
+  .cr-btn.active {
+    background: rgba(255, 100, 0, 0.15);
+    border-color: var(--cr-accent);
+    color: var(--cr-accent);
+  }
+
+  .cr-toggle-handle {
+    position: absolute;
+    bottom: -16px;
+    right: 24px;
+    background: var(--cr-bg-alt);
+    border: 1px solid var(--cr-border);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    padding: 0 8px;
+    font-size: 10px;
+    cursor: pointer;
+    color: var(--cr-text-dim);
+    line-height: 16px;
+  }
+  .cr-toggle-handle:hover {
+    color: var(--cr-accent);
+  }
 `;
 
-// Inject scrollbar styles immediately and on load
+// Initialize Theme
+function applyTheme(isDark) {
+  currentTheme = isDark ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  const themeBtn = document.getElementById('cr-theme-btn');
+  if (themeBtn) {
+    themeBtn.innerHTML = isDark ? '🌙 Dark' : '☀️ Light';
+  }
+}
+
+// Request initial theme from main process
+ipcRenderer.invoke('get-theme-info').then(info => {
+  if (info) applyTheme(info.shouldUseDarkColors);
+}).catch(() => {});
+
+// Listen for device/system theme changes live
+ipcRenderer.on('theme-changed', (event, info) => {
+  if (info) applyTheme(info.shouldUseDarkColors);
+});
+
+// Inject styles
 function injectStyles() {
   if (document.getElementById('cr-custom-styles')) return;
   const styleEl = document.createElement('style');
   styleEl.id = 'cr-custom-styles';
   styleEl.innerText = customStyles;
   (document.head || document.documentElement).appendChild(styleEl);
+}
+
+// Create and Inject the App Bar
+function createAppBar() {
+  if (document.getElementById('cr-app-bar')) return;
+
+  const bar = document.createElement('div');
+  bar.id = 'cr-app-bar';
+  bar.innerHTML = `
+    <!-- Left Navigation -->
+    <div class="cr-bar-section">
+      <button class="cr-btn" id="cr-nav-back" title="Back">◀</button>
+      <button class="cr-btn" id="cr-nav-forward" title="Forward">▶</button>
+      <button class="cr-btn" id="cr-nav-reload" title="Refresh">🔄</button>
+      <button class="cr-btn" id="cr-nav-home" title="Home">🏠 Home</button>
+    </div>
+
+    <!-- Center Quick Navigation -->
+    <div class="cr-bar-section">
+      <button class="cr-btn" id="cr-quick-browse">Explore</button>
+      <button class="cr-btn" id="cr-quick-simulcasts">Simulcasts</button>
+      <button class="cr-btn" id="cr-quick-watchlist">Watchlist</button>
+    </div>
+
+    <!-- Right Player & Theme Tools -->
+    <div class="cr-bar-section">
+      <button class="cr-btn active" id="cr-auto-skip-btn" title="Toggle Auto-Skip Intro/Recap">⚡ Skip: ON</button>
+      <button class="cr-btn" id="cr-speed-btn" title="Cycle Playback Speed">⏩ 1.0x</button>
+      <button class="cr-btn" id="cr-pip-btn" title="Toggle Picture-in-Picture">📺 PiP</button>
+      <button class="cr-btn" id="cr-theme-btn" title="System Theme">${currentTheme === 'dark' ? '🌙 Dark' : '☀️ Light'}</button>
+    </div>
+
+    <!-- Collapse / Expand Handle -->
+    <div class="cr-toggle-handle" id="cr-collapse-btn" title="Toggle Toolbar">▲</div>
+  `;
+
+  (document.body || document.documentElement).appendChild(bar);
+
+  // Hook Navigation buttons
+  document.getElementById('cr-nav-back').addEventListener('click', () => ipcRenderer.send('nav-back'));
+  document.getElementById('cr-nav-forward').addEventListener('click', () => ipcRenderer.send('nav-forward'));
+  document.getElementById('cr-nav-reload').addEventListener('click', () => ipcRenderer.send('nav-reload'));
+  document.getElementById('cr-nav-home').addEventListener('click', () => ipcRenderer.send('nav-home'));
+
+  // Hook Quick Links
+  document.getElementById('cr-quick-browse').addEventListener('click', () => {
+    ipcRenderer.send('nav-url', 'https://www.crunchyroll.com/videos/popular');
+  });
+  document.getElementById('cr-quick-simulcasts').addEventListener('click', () => {
+    ipcRenderer.send('nav-url', 'https://www.crunchyroll.com/simulcasts');
+  });
+  document.getElementById('cr-quick-watchlist').addEventListener('click', () => {
+    ipcRenderer.send('nav-url', 'https://www.crunchyroll.com/watchlist');
+  });
+
+  // Hook Player Controls
+  const autoSkipBtn = document.getElementById('cr-auto-skip-btn');
+  autoSkipBtn.addEventListener('click', () => {
+    autoSkipEnabled = !autoSkipEnabled;
+    autoSkipBtn.innerHTML = autoSkipEnabled ? '⚡ Skip: ON' : '⚡ Skip: OFF';
+    autoSkipBtn.classList.toggle('active', autoSkipEnabled);
+    showToast(`Auto-Skip: ${autoSkipEnabled ? 'ON' : 'OFF'}`);
+  });
+
+  const speedBtn = document.getElementById('cr-speed-btn');
+  speedBtn.addEventListener('click', () => {
+    const speeds = [1.0, 1.25, 1.5, 2.0, 0.75];
+    const current = window.__crPlaybackRate || 1.0;
+    let nextIdx = speeds.indexOf(current) + 1;
+    if (nextIdx >= speeds.length || nextIdx === 0) nextIdx = 0;
+    const nextRate = speeds[nextIdx];
+    window.__crPlaybackRate = nextRate;
+    getActiveVideos().forEach(v => {
+      v.playbackRate = nextRate;
+      v.defaultPlaybackRate = nextRate;
+    });
+    speedBtn.innerHTML = `⏩ ${nextRate}x`;
+    showToast(`Speed: ${nextRate}x`);
+  });
+
+  document.getElementById('cr-pip-btn').addEventListener('click', () => {
+    const video = getActiveVideos()[0];
+    if (video) {
+      if (document.pictureInPictureElement) {
+        document.exitPictureInPicture().catch(() => {});
+        showToast('PiP: Off');
+      } else if (document.pictureInPictureEnabled && video.readyState >= 1) {
+        video.requestPictureInPicture().then(() => showToast('PiP: On')).catch(() => {});
+      }
+    } else {
+      showToast('No active video found');
+    }
+  });
+
+  // Toggle Collapse
+  const collapseBtn = document.getElementById('cr-collapse-btn');
+  collapseBtn.addEventListener('click', () => {
+    isAppBarCollapsed = !isAppBarCollapsed;
+    bar.classList.toggle('collapsed', isAppBarCollapsed);
+    collapseBtn.innerHTML = isAppBarCollapsed ? '▼' : '▲';
+  });
 }
 
 // Show on-screen toast indicator
@@ -33,7 +263,7 @@ function showToast(text) {
     toast.id = 'cr-toast-indicator';
     toast.style.cssText = `
       position: fixed !important;
-      top: 30px !important;
+      top: 50px !important;
       right: 30px !important;
       background: rgba(15, 15, 15, 0.92) !important;
       color: #ff6400 !important;
@@ -97,7 +327,6 @@ function attachVideoListeners(video) {
   video.addEventListener('pause', notifyState);
   video.addEventListener('ended', notifyState);
 
-  // Re-apply speed if player resets it on buffer
   video.addEventListener('ratechange', () => {
     if (window.__crPlaybackRate && Math.abs(video.playbackRate - window.__crPlaybackRate) > 0.05) {
       video.playbackRate = window.__crPlaybackRate;
@@ -109,10 +338,10 @@ function attachVideoListeners(video) {
 
 // Auto-Skip Intro & Recap observer
 function checkAndAutoSkip() {
+  if (!autoSkipEnabled) return;
   function scanRoot(root) {
     if (!root) return;
     try {
-      // 1. Selector-based match
       const candidates = root.querySelectorAll ? root.querySelectorAll(
         '[data-t="skip-intro-btn"], [data-t="skip-recap-btn"], [data-t="skip-button"], ' +
         '[data-testid*="skip"], button[class*="skip"], div[class*="skip"][role="button"], ' +
@@ -127,7 +356,6 @@ function checkAndAutoSkip() {
         }
       }
 
-      // 2. Text-based match on visible buttons
       const buttons = root.querySelectorAll ? root.querySelectorAll('button, div[role="button"]') : [];
       for (let i = 0; i < buttons.length; i++) {
         const btn = buttons[i];
@@ -140,7 +368,6 @@ function checkAndAutoSkip() {
         }
       }
 
-      // 3. Scan shadow roots
       const elements = root.querySelectorAll ? root.querySelectorAll('*') : [];
       for (let i = 0; i < elements.length; i++) {
         if (elements[i].shadowRoot) {
@@ -153,9 +380,8 @@ function checkAndAutoSkip() {
   scanRoot(document);
 }
 
-// Keydown handler registered in CAPTURE phase so player cannot suppress it
+// Global Keydown Handler
 function handleGlobalKeyDown(e) {
-  // Ignore keystrokes in inputs, textareas, contentEditable
   const activeEl = document.activeElement;
   const isInput = activeEl && (
     activeEl.tagName === 'INPUT' ||
@@ -179,6 +405,8 @@ function handleGlobalKeyDown(e) {
       v.playbackRate = newRate;
       v.defaultPlaybackRate = newRate;
     });
+    const speedBtn = document.getElementById('cr-speed-btn');
+    if (speedBtn) speedBtn.innerHTML = `⏩ ${newRate}x`;
     showToast(`Speed: ${newRate}x`);
     return;
   }
@@ -194,6 +422,8 @@ function handleGlobalKeyDown(e) {
       v.playbackRate = newRate;
       v.defaultPlaybackRate = newRate;
     });
+    const speedBtn = document.getElementById('cr-speed-btn');
+    if (speedBtn) speedBtn.innerHTML = `⏩ ${nextRate}x`;
     showToast(`Speed: ${newRate}x`);
     return;
   }
@@ -215,12 +445,12 @@ function handleGlobalKeyDown(e) {
   }
 }
 
-// Setup listeners immediately
+// Setup immediately
 injectStyles();
 window.addEventListener('keydown', handleGlobalKeyDown, true);
 document.addEventListener('keydown', handleGlobalKeyDown, true);
 
-// Interval loop to monitor videos and auto-skip
+// Loop for video tracking and auto-skip
 setInterval(() => {
   const videos = getActiveVideos();
   videos.forEach(attachVideoListeners);
@@ -229,8 +459,10 @@ setInterval(() => {
 
 window.addEventListener('DOMContentLoaded', () => {
   injectStyles();
+  createAppBar();
   const videos = getActiveVideos();
   videos.forEach(attachVideoListeners);
 });
+
 
 
