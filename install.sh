@@ -48,6 +48,17 @@ if [ "$1" == "--clean" ] || [ "$1" == "--repair" ]; then
   echo "✅ Stale session locks and caches cleared."
 fi
 
+# Step 1: Detect and close any running Crunchyroll instances for a clean restart
+WAS_RUNNING=0
+RUNNING_PIDS=$(pgrep -f "(electron|crunchyroll).*main\.js" 2>/dev/null || true)
+if [ -n "$RUNNING_PIDS" ]; then
+  echo "🔄 Detected running Crunchyroll instance(s). Closing for fresh restart..."
+  WAS_RUNNING=1
+  pkill -15 -f "(electron|crunchyroll).*main\.js" 2>/dev/null || true
+  sleep 1
+  pkill -9 -f "(electron|crunchyroll).*main\.js" 2>/dev/null || true
+fi
+
 # Clean up any obsolete desktop entries
 rm -f "$HOME/.local/share/applications/crunchyroll-desktop.desktop"
 
@@ -80,8 +91,6 @@ Comment=Unofficial Crunchyroll Desktop Client with Widevine DRM
 StartupWMClass=crunchyroll
 StartupNotify=true
 EOF
-  sudo update-desktop-database /usr/share/applications 2>/dev/null || true
-  sudo gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
 else
   DESKTOP_DIR="$HOME/.local/share/applications"
   mkdir -p "$DESKTOP_DIR"
@@ -101,9 +110,32 @@ Comment=Unofficial Crunchyroll Desktop Client with Widevine DRM
 StartupWMClass=crunchyroll
 StartupNotify=true
 EOF
-  update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
-  gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
 fi
 
-echo "✅ Crunchyroll installed successfully in Zorin OS! Find it in the Zorin Menu under 'Sound & Video'."
+# Step 2: Restart and refresh all desktop, icon, and menu services
+echo "🔄 Refreshing system desktop services, icon caches, and menus..."
+update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+if [ -w "/usr/share/applications" ] || [ "$EUID" -eq 0 ]; then
+  update-desktop-database /usr/share/applications 2>/dev/null || true
+  gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+update-mime-database "$HOME/.local/share/mime" 2>/dev/null || true
+
+# Step 3: Trigger menu refresh for GNOME Shell / Zorin Desktop
+if command -v xdg-desktop-menu &> /dev/null; then
+  xdg-desktop-menu forceupdate 2>/dev/null || true
+fi
+
+# Step 4: Relaunch app if it was running or if requested via --restart / -r
+if [ "$WAS_RUNNING" -eq 1 ] || [ "$1" == "--restart" ] || [ "$2" == "--restart" ]; then
+  echo "🚀 Relaunching Crunchyroll with updated services..."
+  nohup "${EXEC_PATH:-electron}" --no-sandbox "$MAIN_PATH" > /dev/null 2>&1 &
+fi
+
+if command -v notify-send &> /dev/null; then
+  notify-send -i "$ICON_PATH" "Crunchyroll" "Application updated and services refreshed successfully!" 2>/dev/null || true
+fi
+
+echo "✅ Crunchyroll installed & services restarted successfully in Zorin OS!"
 
