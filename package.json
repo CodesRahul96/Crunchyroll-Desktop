@@ -58,6 +58,11 @@
       ],
       "category": "public.app-category.entertainment",
       "icon": "resources/app/icon.png"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "CodesRahul96",
+      "repo": "Crunchyroll-Desktop"
     }
   }
 }
