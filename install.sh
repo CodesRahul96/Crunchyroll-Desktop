@@ -25,24 +25,37 @@ fi
 # Clean up any obsolete desktop entries
 rm -f "$HOME/.local/share/applications/crunchyroll-desktop.desktop"
 
+# Install icon to user hicolor theme
+mkdir -p "$HOME/.local/share/icons/hicolor/512x512/apps"
+cp "$ICON_PATH" "$HOME/.local/share/icons/hicolor/512x512/apps/crunchyroll.png" 2>/dev/null || true
+
 # Choose install target: User-level (~/.local/share/applications) or System-wide (/usr/share/applications)
 if [ "$1" == "--system" ]; then
   DESKTOP_DIR="/usr/share/applications"
   DESKTOP_FILE="$DESKTOP_DIR/crunchyroll.desktop"
   echo "Installing system-wide to $DESKTOP_FILE..."
+  
+  # Install system icon
+  sudo mkdir -p /usr/share/icons/hicolor/512x512/apps
+  sudo cp "$ICON_PATH" /usr/share/icons/hicolor/512x512/apps/crunchyroll.png 2>/dev/null || true
   sudo rm -f "/usr/share/applications/crunchyroll-desktop.desktop"
+  
   sudo tee "$DESKTOP_FILE" > /dev/null <<EOF
 [Desktop Entry]
 Name=Crunchyroll
+GenericName=Anime Streaming Client
 Exec=${EXEC_PATH:-electron} --no-sandbox $MAIN_PATH
 Icon=$ICON_PATH
 Terminal=false
 Type=Application
-Categories=AudioVideo;Video;Player;
-Comment=Unofficial Crunchyroll Desktop Client
+Categories=AudioVideo;Video;Player;TV;Entertainment;
+Keywords=anime;crunchyroll;streaming;video;japanese;tv;animation;
+Comment=Unofficial Crunchyroll Desktop Client with Widevine DRM
 StartupWMClass=crunchyroll
+StartupNotify=true
 EOF
   sudo update-desktop-database /usr/share/applications 2>/dev/null || true
+  sudo gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
 else
   DESKTOP_DIR="$HOME/.local/share/applications"
   mkdir -p "$DESKTOP_DIR"
@@ -51,16 +64,20 @@ else
   tee "$DESKTOP_FILE" > /dev/null <<EOF
 [Desktop Entry]
 Name=Crunchyroll
+GenericName=Anime Streaming Client
 Exec=${EXEC_PATH:-electron} --no-sandbox $MAIN_PATH
 Icon=$ICON_PATH
 Terminal=false
 Type=Application
-Categories=AudioVideo;Video;Player;
-Comment=Unofficial Crunchyroll Desktop Client
+Categories=AudioVideo;Video;Player;TV;Entertainment;
+Keywords=anime;crunchyroll;streaming;video;japanese;tv;animation;
+Comment=Unofficial Crunchyroll Desktop Client with Widevine DRM
 StartupWMClass=crunchyroll
+StartupNotify=true
 EOF
   update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
+  gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
 fi
 
-echo "✅ Crunchyroll shortcut installed successfully! Find it in your Application Menu."
+echo "✅ Crunchyroll installed successfully in Zorin OS! Find it in the Zorin Menu under 'Sound & Video'."
 
