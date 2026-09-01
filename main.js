@@ -2,6 +2,13 @@ const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker } = require('electr
 const path = require('path');
 const fs = require('fs');
 
+// Set application identity for OS taskbars and docks
+app.setName('Crunchyroll');
+app.setAppUserModelId('com.codesrahul.crunchyroll');
+if (process.platform === 'linux') {
+  app.setDesktopName('crunchyroll.desktop');
+}
+
 // Ensure single instance of the application
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
