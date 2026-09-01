@@ -1,0 +1,20 @@
+{
+  "name": "crunchyroll-linux",
+  "version": "1.0.0",
+  "description": "An unofficial Crunchyroll desktop application for Linux with Widevine DRM support",
+  "main": "main.js",
+  "author": "CodesRahul96",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CodesRahul96/Crunchyroll_Linux.git"
+  },
+  "scripts": {
+    "start": "./electron-widevine/electron .",
+    "dist": "electron-packager . crunchyroll --platform=linux --arch=x64 --out=./dist --overwrite --icon=./resources/app/icon.png --electron-binary=./electron-widevine/electron --electron-version=35.1.5"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron-packager": "^15.5.0"
+  }
+}
