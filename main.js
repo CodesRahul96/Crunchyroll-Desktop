@@ -35,7 +35,7 @@ function getIconPath() {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    title: 'Crunchyroll Desktop',
+    title: 'Crunchyroll',
     width: 1280,
     height: 720,
     minWidth: 800,

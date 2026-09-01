@@ -22,41 +22,45 @@ if [ -z "$EXEC_PATH" ] || [ ! -f "$MAIN_PATH" ]; then
   echo "⚠️  Note: Make sure to run 'npm install' or extract the packaged release before running install.sh."
 fi
 
+# Clean up any obsolete desktop entries
+rm -f "$HOME/.local/share/applications/crunchyroll-desktop.desktop"
+
 # Choose install target: User-level (~/.local/share/applications) or System-wide (/usr/share/applications)
 if [ "$1" == "--system" ]; then
   DESKTOP_DIR="/usr/share/applications"
-  DESKTOP_FILE="$DESKTOP_DIR/crunchyroll-desktop.desktop"
+  DESKTOP_FILE="$DESKTOP_DIR/crunchyroll.desktop"
   echo "Installing system-wide to $DESKTOP_FILE..."
+  sudo rm -f "/usr/share/applications/crunchyroll-desktop.desktop"
   sudo tee "$DESKTOP_FILE" > /dev/null <<EOF
 [Desktop Entry]
-Name=Crunchyroll Desktop
+Name=Crunchyroll
 Exec=${EXEC_PATH:-electron} $MAIN_PATH
 Icon=$ICON_PATH
 Terminal=false
 Type=Application
 Categories=AudioVideo;Video;Player;
 Comment=Unofficial Crunchyroll Desktop Client
-StartupWMClass=crunchyroll-desktop
+StartupWMClass=crunchyroll
 EOF
   sudo update-desktop-database /usr/share/applications 2>/dev/null || true
 else
   DESKTOP_DIR="$HOME/.local/share/applications"
   mkdir -p "$DESKTOP_DIR"
-  DESKTOP_FILE="$DESKTOP_DIR/crunchyroll-desktop.desktop"
+  DESKTOP_FILE="$DESKTOP_DIR/crunchyroll.desktop"
   echo "Installing for current user to $DESKTOP_FILE..."
   tee "$DESKTOP_FILE" > /dev/null <<EOF
 [Desktop Entry]
-Name=Crunchyroll Desktop
+Name=Crunchyroll
 Exec=${EXEC_PATH:-electron} $MAIN_PATH
 Icon=$ICON_PATH
 Terminal=false
 Type=Application
 Categories=AudioVideo;Video;Player;
 Comment=Unofficial Crunchyroll Desktop Client
-StartupWMClass=crunchyroll-desktop
+StartupWMClass=crunchyroll
 EOF
   update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
 fi
 
-echo "✅ Crunchyroll Desktop shortcut installed successfully! Find it in your Application Menu."
+echo "✅ Crunchyroll shortcut installed successfully! Find it in your Application Menu."
 

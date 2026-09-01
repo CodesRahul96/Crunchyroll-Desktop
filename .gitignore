@@ -1,6 +1,8 @@
 node_modules/
 dist/
 build/
+electron-widevine/
+WidevineCdm/
 .env
 .DS_Store
 *.log

@@ -1,6 +1,6 @@
 {
-  "name": "crunchyroll-desktop",
-  "productName": "Crunchyroll Desktop",
+  "name": "crunchyroll",
+  "productName": "Crunchyroll",
   "version": "1.0.0",
   "description": "An unofficial cross-platform Crunchyroll desktop application for Linux, Windows, and macOS with Widevine DRM support",
   "main": "main.js",
@@ -26,7 +26,7 @@
   },
   "build": {
     "appId": "com.codesrahul.crunchyroll",
-    "productName": "Crunchyroll Desktop",
+    "productName": "Crunchyroll",
     "directories": {
       "output": "dist"
     },
