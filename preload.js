@@ -3,6 +3,7 @@ const { ipcRenderer } = require('electron');
 let currentTheme = 'dark';
 let autoSkipEnabled = true;
 let isAppBarCollapsed = false;
+let navState = { canGoBack: false, canGoForward: false };
 
 // Custom CSS Injection for sleek scrollbars, dynamic App Bar, and page layout offset
 const customStyles = `
@@ -11,7 +12,7 @@ const customStyles = `
     --cr-bg-alt: #23252b;
     --cr-text: #ffffff;
     --cr-text-dim: #a0a0a0;
-    --cr-border: rgba(255, 255, 255, 0.12);
+    --cr-border: rgba(255, 255, 255, 0.18);
     --cr-accent: #ff6400;
     --cr-accent-hover: #ff7e29;
   }
@@ -21,19 +22,19 @@ const customStyles = `
     --cr-bg-alt: #ffffff;
     --cr-text: #141519;
     --cr-text-dim: #5a5d66;
-    --cr-border: rgba(0, 0, 0, 0.12);
+    --cr-border: rgba(0, 0, 0, 0.18);
     --cr-accent: #ff6400;
     --cr-accent-hover: #e55a00;
   }
 
   /* Body & Header Offset to accommodate top App Bar */
   body {
-    padding-top: 40px !important;
+    padding-top: 42px !important;
   }
 
   /* Adjust Crunchyroll sticky/fixed headers */
-  header, [class*="header_wrapper"], [class*="erc-header"], [data-t="header-wrapper"] {
-    top: 40px !important;
+  header, [class*="header_wrapper"], [class*="erc-header"], [data-t="header-wrapper"], nav[class*="header"] {
+    top: 42px !important;
   }
 
   /* Custom Scrollbar */
@@ -52,29 +53,33 @@ const customStyles = `
 
   /* Top App Bar Container */
   #cr-app-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 40px;
-    background: var(--cr-bg);
-    color: var(--cr-text);
-    border-bottom: 1px solid var(--cr-border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 12px;
-    box-sizing: border-box;
-    z-index: 2147483646;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 13px;
-    user-select: none;
-    transition: transform 0.25s ease, background 0.3s ease;
-    backdrop-filter: blur(14px);
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 42px !important;
+    background: var(--cr-bg) !important;
+    color: var(--cr-text) !important;
+    border-bottom: 1px solid var(--cr-border) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 14px !important;
+    box-sizing: border-box !important;
+    z-index: 2147483647 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 13px !important;
+    user-select: none !important;
+    transition: transform 0.25s ease, background 0.3s ease !important;
+    backdrop-filter: blur(16px) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
   }
 
   #cr-app-bar.collapsed {
-    transform: translateY(-34px);
+    transform: translateY(-36px) !important;
   }
 
   /* When fullscreen video, hide App Bar completely and reset body padding */
@@ -93,36 +98,42 @@ const customStyles = `
 
   /* App Bar Sections */
   .cr-bar-section {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
   }
 
   /* Buttons */
   .cr-btn {
-    background: var(--cr-bg-alt);
-    color: var(--cr-text);
-    border: 1px solid var(--cr-border);
-    border-radius: 6px;
-    padding: 4px 9px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    transition: all 0.15s ease;
+    background: var(--cr-bg-alt) !important;
+    color: var(--cr-text) !important;
+    border: 1px solid var(--cr-border) !important;
+    border-radius: 6px !important;
+    padding: 5px 10px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    transition: all 0.15s ease !important;
+    line-height: 1.2 !important;
   }
 
   .cr-btn:hover {
-    border-color: var(--cr-accent);
-    color: var(--cr-accent);
+    border-color: var(--cr-accent) !important;
+    color: var(--cr-accent) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  .cr-btn:active {
+    transform: translateY(0) !important;
   }
 
   .cr-btn.active {
-    background: rgba(255, 100, 0, 0.15);
-    border-color: var(--cr-accent);
-    color: var(--cr-accent);
+    background: rgba(255, 100, 0, 0.2) !important;
+    border-color: var(--cr-accent) !important;
+    color: var(--cr-accent) !important;
   }
 
   .cr-btn.disabled,
@@ -132,55 +143,60 @@ const customStyles = `
     border-color: var(--cr-border) !important;
     color: var(--cr-text-dim) !important;
     pointer-events: none !important;
+    transform: none !important;
   }
 
   /* Navigation Action Buttons (Back & Forward) */
   .cr-nav-btn {
-    font-weight: 600;
-    padding: 4px 10px;
-    background: var(--cr-bg-alt);
+    font-weight: 700 !important;
+    padding: 5px 12px !important;
+    background: var(--cr-bg-alt) !important;
+    border: 1px solid var(--cr-border) !important;
   }
   .cr-nav-btn:hover:not(:disabled) {
-    background: rgba(255, 100, 0, 0.12);
-    border-color: var(--cr-accent);
+    background: rgba(255, 100, 0, 0.15) !important;
+    border-color: var(--cr-accent) !important;
+    color: var(--cr-accent) !important;
   }
   .cr-nav-arrow {
-    font-size: 11px;
+    font-size: 13px !important;
+    font-weight: bold !important;
   }
 
   .cr-toggle-handle {
-    position: absolute;
-    bottom: -16px;
-    right: 24px;
-    background: var(--cr-bg-alt);
-    border: 1px solid var(--cr-border);
-    border-top: none;
-    border-radius: 0 0 6px 6px;
-    padding: 0 8px;
-    font-size: 10px;
-    cursor: pointer;
-    color: var(--cr-text-dim);
-    line-height: 16px;
+    position: absolute !important;
+    bottom: -18px !important;
+    right: 24px !important;
+    background: var(--cr-bg-alt) !important;
+    border: 1px solid var(--cr-border) !important;
+    border-top: none !important;
+    border-radius: 0 0 6px 6px !important;
+    padding: 0 10px !important;
+    font-size: 10px !important;
+    cursor: pointer !important;
+    color: var(--cr-text-dim) !important;
+    line-height: 18px !important;
+    z-index: 2147483647 !important;
   }
   .cr-toggle-handle:hover {
-    color: var(--cr-accent);
+    color: var(--cr-accent) !important;
   }
 
   /* Modal & Setup Wizard */
   #cr-setup-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(8px);
-    z-index: 2147483647;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    animation: crFadeIn 0.2s ease;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    backdrop-filter: blur(8px) !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    animation: crFadeIn 0.2s ease !important;
   }
 
   @keyframes crFadeIn {
@@ -189,104 +205,104 @@ const customStyles = `
   }
 
   .cr-modal-card {
-    background: var(--cr-bg);
-    color: var(--cr-text);
-    border: 1px solid var(--cr-border);
-    border-radius: 16px;
-    width: 90%;
-    max-width: 520px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--cr-border);
-    overflow: hidden;
+    background: var(--cr-bg) !important;
+    color: var(--cr-text) !important;
+    border: 1px solid var(--cr-border) !important;
+    border-radius: 16px !important;
+    width: 90% !important;
+    max-width: 520px !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 0 1px var(--cr-border) !important;
+    overflow: hidden !important;
   }
 
   .cr-modal-header {
-    padding: 24px 24px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--cr-border);
+    padding: 24px 24px 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-bottom: 1px solid var(--cr-border) !important;
   }
 
   .cr-modal-title {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--cr-text);
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: var(--cr-text) !important;
   }
 
   .cr-modal-close {
-    background: transparent;
-    border: none;
-    color: var(--cr-text-dim);
-    font-size: 20px;
-    cursor: pointer;
-    line-height: 1;
-    padding: 4px;
-    border-radius: 6px;
+    background: transparent !important;
+    border: none !important;
+    color: var(--cr-text-dim) !important;
+    font-size: 20px !important;
+    cursor: pointer !important;
+    line-height: 1 !important;
+    padding: 4px !important;
+    border-radius: 6px !important;
   }
   .cr-modal-close:hover {
-    color: var(--cr-text);
-    background: var(--cr-bg-alt);
+    color: var(--cr-text) !important;
+    background: var(--cr-bg-alt) !important;
   }
 
   .cr-modal-body {
-    padding: 20px 24px;
-    max-height: 70vh;
-    overflow-y: auto;
+    padding: 20px 24px !important;
+    max-height: 70vh !important;
+    overflow-y: auto !important;
   }
 
   .cr-setup-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--cr-border);
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 12px 0 !important;
+    border-bottom: 1px solid var(--cr-border) !important;
   }
 
   .cr-setup-info h4 {
-    margin: 0 0 4px 0;
-    font-size: 14px;
-    font-weight: 600;
+    margin: 0 0 4px 0 !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
   }
   .cr-setup-info p {
-    margin: 0;
-    font-size: 12px;
-    color: var(--cr-text-dim);
+    margin: 0 !important;
+    font-size: 12px !important;
+    color: var(--cr-text-dim) !important;
   }
 
   .cr-shortcut-pill {
-    background: var(--cr-bg-alt);
-    padding: 2px 6px;
-    border-radius: 4px;
-    border: 1px solid var(--cr-border);
-    font-family: monospace;
-    font-size: 11px;
-    color: var(--cr-accent);
+    background: var(--cr-bg-alt) !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    border: 1px solid var(--cr-border) !important;
+    font-family: monospace !important;
+    font-size: 11px !important;
+    color: var(--cr-accent) !important;
   }
 
   .cr-modal-footer {
-    padding: 16px 24px;
-    background: var(--cr-bg-alt);
-    display: flex;
-    justify-content: flex-end;
-    border-top: 1px solid var(--cr-border);
+    padding: 16px 24px !important;
+    background: var(--cr-bg-alt) !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    border-top: 1px solid var(--cr-border) !important;
   }
 
   .cr-primary-btn {
-    background: var(--cr-accent);
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background 0.15s ease;
+    background: var(--cr-accent) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    cursor: pointer !important;
+    transition: background 0.15s ease !important;
   }
   .cr-primary-btn:hover {
-    background: var(--cr-accent-hover);
+    background: var(--cr-accent-hover) !important;
   }
 `;
 
@@ -312,13 +328,15 @@ ipcRenderer.on('theme-changed', (event, info) => {
 
 // Update navigation buttons status (Back/Forward enabled/disabled)
 function updateNavButtons(state) {
+  if (!state) return;
+  navState = state;
   const backBtn = document.getElementById('cr-nav-back');
   const forwardBtn = document.getElementById('cr-nav-forward');
-  if (backBtn && typeof state.canGoBack === 'boolean') {
+  if (backBtn) {
     backBtn.disabled = !state.canGoBack;
     backBtn.classList.toggle('disabled', !state.canGoBack);
   }
-  if (forwardBtn && typeof state.canGoForward === 'boolean') {
+  if (forwardBtn) {
     forwardBtn.disabled = !state.canGoForward;
     forwardBtn.classList.toggle('disabled', !state.canGoForward);
   }
@@ -335,7 +353,8 @@ function injectStyles() {
   const styleEl = document.createElement('style');
   styleEl.id = 'cr-custom-styles';
   styleEl.innerText = customStyles;
-  (document.head || document.documentElement).appendChild(styleEl);
+  const target = document.head || document.documentElement;
+  if (target) target.appendChild(styleEl);
 }
 
 // Open Setup / Welcome Wizard Modal
@@ -401,7 +420,8 @@ function openSetupModal() {
     </div>
   `;
 
-  (document.body || document.documentElement).appendChild(modal);
+  const target = document.body || document.documentElement;
+  if (target) target.appendChild(modal);
 
   // Close logic
   const closeModal = () => {
@@ -437,9 +457,16 @@ function openSetupModal() {
 
 // Create and Inject the App Bar
 function createAppBar() {
-  if (document.getElementById('cr-app-bar')) return;
+  const target = document.body || document.documentElement;
+  if (!target) return;
 
-  const bar = document.createElement('div');
+  let bar = document.getElementById('cr-app-bar');
+  if (bar) {
+    if (!target.contains(bar)) target.appendChild(bar);
+    return;
+  }
+
+  bar = document.createElement('div');
   bar.id = 'cr-app-bar';
   bar.innerHTML = `
     <!-- Left Navigation: Back, Forward, Reload, Home -->
@@ -450,7 +477,7 @@ function createAppBar() {
       <button class="cr-btn cr-nav-btn" id="cr-nav-forward" title="Go Forward (Alt+Right)">
         <span>Forward</span> <span class="cr-nav-arrow">▶</span>
       </button>
-      <button class="cr-btn" id="cr-nav-reload" title="Refresh Page (Ctrl+R)">🔄</button>
+      <button class="cr-btn" id="cr-nav-reload" title="Refresh Page (Ctrl+R)">🔄 Refresh</button>
       <button class="cr-btn" id="cr-nav-home" title="Crunchyroll Home">🏠 Home</button>
     </div>
 
@@ -474,7 +501,7 @@ function createAppBar() {
     <div class="cr-toggle-handle" id="cr-collapse-btn" title="Toggle Toolbar">▲</div>
   `;
 
-  (document.body || document.documentElement).appendChild(bar);
+  target.appendChild(bar);
 
   // Initial navigation state check
   ipcRenderer.invoke('get-nav-state').then(state => {
@@ -560,6 +587,17 @@ function createAppBar() {
     bar.classList.toggle('collapsed', isAppBarCollapsed);
     collapseBtn.innerHTML = isAppBarCollapsed ? '▼' : '▲';
   });
+
+  // Apply last known navState
+  updateNavButtons(navState);
+}
+
+// Permanent Guardian to ensure App Bar and styles are never removed by React SPA re-renders
+function ensureAppBar() {
+  injectStyles();
+  if (!document.getElementById('cr-app-bar') || !document.getElementById('cr-custom-styles')) {
+    createAppBar();
+  }
 }
 
 // Show on-screen toast indicator
@@ -585,7 +623,8 @@ function showToast(text) {
       transition: opacity 0.3s ease !important;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     `;
-    (document.body || document.documentElement).appendChild(toast);
+    const target = document.body || document.documentElement;
+    if (target) target.appendChild(toast);
   }
   toast.innerText = text;
   toast.style.opacity = '1';
@@ -768,21 +807,28 @@ function handleGlobalKeyDown(e) {
   }
 }
 
-// Setup immediately
-injectStyles();
+// Setup immediate listeners
 window.addEventListener('keydown', handleGlobalKeyDown, true);
 document.addEventListener('keydown', handleGlobalKeyDown, true);
 
-// Loop for video tracking and auto-skip
-setInterval(() => {
-  const videos = getActiveVideos();
-  videos.forEach(attachVideoListeners);
-  checkAndAutoSkip();
-}, 500);
+// Initial setup attempt
+ensureAppBar();
 
+// Setup on DOM events
 window.addEventListener('DOMContentLoaded', () => {
-  injectStyles();
-  createAppBar();
+  ensureAppBar();
   const videos = getActiveVideos();
   videos.forEach(attachVideoListeners);
 });
+
+window.addEventListener('load', () => {
+  ensureAppBar();
+});
+
+// Continuous loop for SPA navigation, video tracking, and auto-skip
+setInterval(() => {
+  ensureAppBar();
+  const videos = getActiveVideos();
+  videos.forEach(attachVideoListeners);
+  checkAndAutoSkip();
+}, 400);
