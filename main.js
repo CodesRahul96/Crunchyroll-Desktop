@@ -99,6 +99,28 @@ function createWindow() {
     return { action: 'allow' };
   });
 
+  // Handle mouse Back / Forward navigation buttons
+  mainWindow.on('app-command', (e, cmd) => {
+    if (cmd === 'browser-backward' && mainWindow.webContents.canGoBack()) {
+      mainWindow.webContents.goBack();
+    } else if (cmd === 'browser-forward' && mainWindow.webContents.canGoForward()) {
+      mainWindow.webContents.goForward();
+    }
+  });
+
+  // Track navigation state changes
+  const sendNavState = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('nav-state-changed', {
+        canGoBack: mainWindow.webContents.canGoBack(),
+        canGoForward: mainWindow.webContents.canGoForward()
+      });
+    }
+  };
+
+  mainWindow.webContents.on('did-navigate', sendNavState);
+  mainWindow.webContents.on('did-navigate-in-page', sendNavState);
+
   mainWindow.on('closed', () => {
     mainWindow = null;
     if (powerSaveBlockerId !== null && powerSaveBlocker.isStarted(powerSaveBlockerId)) {
@@ -141,6 +163,13 @@ ipcMain.on('nav-home', () => {
 
 ipcMain.on('nav-url', (event, url) => {
   if (mainWindow) mainWindow.loadURL(url);
+});
+
+ipcMain.handle('get-nav-state', () => {
+  return {
+    canGoBack: mainWindow ? mainWindow.webContents.canGoBack() : false,
+    canGoForward: mainWindow ? mainWindow.webContents.canGoForward() : false
+  };
 });
 
 ipcMain.on('window-minimize', () => {

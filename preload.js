@@ -4,7 +4,7 @@ let currentTheme = 'dark';
 let autoSkipEnabled = true;
 let isAppBarCollapsed = false;
 
-// Custom CSS Injection for sleek dark scrollbars & dynamic App Bar
+// Custom CSS Injection for sleek scrollbars, dynamic App Bar, and page layout offset
 const customStyles = `
   :root {
     --cr-bg: #141519;
@@ -26,6 +26,16 @@ const customStyles = `
     --cr-accent-hover: #e55a00;
   }
 
+  /* Body & Header Offset to accommodate top App Bar */
+  body {
+    padding-top: 40px !important;
+  }
+
+  /* Adjust Crunchyroll sticky/fixed headers */
+  header, [class*="header_wrapper"], [class*="erc-header"], [data-t="header-wrapper"] {
+    top: 40px !important;
+  }
+
   /* Custom Scrollbar */
   ::-webkit-scrollbar {
     width: 8px !important;
@@ -40,7 +50,7 @@ const customStyles = `
     background: rgba(255, 255, 255, 0.45) !important;
   }
 
-  /* App Bar Container */
+  /* Top App Bar Container */
   #cr-app-bar {
     position: fixed;
     top: 0;
@@ -60,17 +70,25 @@ const customStyles = `
     font-size: 13px;
     user-select: none;
     transition: transform 0.25s ease, background 0.3s ease;
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(14px);
   }
 
   #cr-app-bar.collapsed {
     transform: translateY(-34px);
   }
 
-  /* When fullscreen, hide App Bar completely */
+  /* When fullscreen video, hide App Bar completely and reset body padding */
   :fullscreen #cr-app-bar,
   :-webkit-full-screen #cr-app-bar {
     display: none !important;
+  }
+  :fullscreen body,
+  :-webkit-full-screen body {
+    padding-top: 0 !important;
+  }
+  :fullscreen header,
+  :-webkit-full-screen header {
+    top: 0 !important;
   }
 
   /* App Bar Sections */
@@ -80,18 +98,19 @@ const customStyles = `
     gap: 6px;
   }
 
+  /* Buttons */
   .cr-btn {
     background: var(--cr-bg-alt);
     color: var(--cr-text);
     border: 1px solid var(--cr-border);
     border-radius: 6px;
-    padding: 4px 8px;
+    padding: 4px 9px;
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     transition: all 0.15s ease;
   }
 
@@ -104,6 +123,29 @@ const customStyles = `
     background: rgba(255, 100, 0, 0.15);
     border-color: var(--cr-accent);
     color: var(--cr-accent);
+  }
+
+  .cr-btn.disabled,
+  .cr-btn:disabled {
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+    border-color: var(--cr-border) !important;
+    color: var(--cr-text-dim) !important;
+    pointer-events: none !important;
+  }
+
+  /* Navigation Action Buttons (Back & Forward) */
+  .cr-nav-btn {
+    font-weight: 600;
+    padding: 4px 10px;
+    background: var(--cr-bg-alt);
+  }
+  .cr-nav-btn:hover:not(:disabled) {
+    background: rgba(255, 100, 0, 0.12);
+    border-color: var(--cr-accent);
+  }
+  .cr-nav-arrow {
+    font-size: 11px;
   }
 
   .cr-toggle-handle {
@@ -123,6 +165,7 @@ const customStyles = `
   .cr-toggle-handle:hover {
     color: var(--cr-accent);
   }
+
   /* Modal & Setup Wizard */
   #cr-setup-modal-overlay {
     position: fixed;
@@ -171,11 +214,6 @@ const customStyles = `
     font-size: 20px;
     font-weight: 700;
     color: var(--cr-text);
-  }
-
-  .cr-modal-title img {
-    width: 32px;
-    height: 32px;
   }
 
   .cr-modal-close {
@@ -272,6 +310,25 @@ ipcRenderer.on('theme-changed', (event, info) => {
   if (info) applyTheme(info.shouldUseDarkColors);
 });
 
+// Update navigation buttons status (Back/Forward enabled/disabled)
+function updateNavButtons(state) {
+  const backBtn = document.getElementById('cr-nav-back');
+  const forwardBtn = document.getElementById('cr-nav-forward');
+  if (backBtn && typeof state.canGoBack === 'boolean') {
+    backBtn.disabled = !state.canGoBack;
+    backBtn.classList.toggle('disabled', !state.canGoBack);
+  }
+  if (forwardBtn && typeof state.canGoForward === 'boolean') {
+    forwardBtn.disabled = !state.canGoForward;
+    forwardBtn.classList.toggle('disabled', !state.canGoForward);
+  }
+}
+
+// Listen for navigation state from main process
+ipcRenderer.on('nav-state-changed', (event, state) => {
+  if (state) updateNavButtons(state);
+});
+
 // Inject styles
 function injectStyles() {
   if (document.getElementById('cr-custom-styles')) return;
@@ -327,8 +384,9 @@ function openSetupModal() {
         </div>
 
         <div style="margin-top: 16px;">
-          <h4 style="margin: 0 0 10px 0; font-size: 13px; color: var(--cr-text-dim);">KEYBOARD SHORTCUTS</h4>
+          <h4 style="margin: 0 0 10px 0; font-size: 13px; color: var(--cr-text-dim);">NAVIGATION & SHORTCUTS</h4>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+            <div><span class="cr-shortcut-pill">Alt+←</span> / <span class="cr-shortcut-pill">Alt+→</span> Back / Forward</div>
             <div><span class="cr-shortcut-pill">[</span> / <span class="cr-shortcut-pill">]</span> Adjust Speed</div>
             <div><span class="cr-shortcut-pill">P</span> Picture-in-Picture</div>
             <div><span class="cr-shortcut-pill">Space</span> Play / Pause</div>
@@ -384,19 +442,23 @@ function createAppBar() {
   const bar = document.createElement('div');
   bar.id = 'cr-app-bar';
   bar.innerHTML = `
-    <!-- Left Navigation -->
+    <!-- Left Navigation: Back, Forward, Reload, Home -->
     <div class="cr-bar-section">
-      <button class="cr-btn" id="cr-nav-back" title="Back">◀</button>
-      <button class="cr-btn" id="cr-nav-forward" title="Forward">▶</button>
-      <button class="cr-btn" id="cr-nav-reload" title="Refresh">🔄</button>
-      <button class="cr-btn" id="cr-nav-home" title="Home">🏠 Home</button>
+      <button class="cr-btn cr-nav-btn" id="cr-nav-back" title="Go Back (Alt+Left)">
+        <span class="cr-nav-arrow">◀</span> <span>Back</span>
+      </button>
+      <button class="cr-btn cr-nav-btn" id="cr-nav-forward" title="Go Forward (Alt+Right)">
+        <span>Forward</span> <span class="cr-nav-arrow">▶</span>
+      </button>
+      <button class="cr-btn" id="cr-nav-reload" title="Refresh Page (Ctrl+R)">🔄</button>
+      <button class="cr-btn" id="cr-nav-home" title="Crunchyroll Home">🏠 Home</button>
     </div>
 
     <!-- Center Quick Navigation -->
     <div class="cr-bar-section">
-      <button class="cr-btn" id="cr-quick-browse">Explore</button>
-      <button class="cr-btn" id="cr-quick-simulcasts">Simulcasts</button>
-      <button class="cr-btn" id="cr-quick-watchlist">Watchlist</button>
+      <button class="cr-btn" id="cr-quick-browse">🍿 Explore</button>
+      <button class="cr-btn" id="cr-quick-simulcasts">📅 Simulcasts</button>
+      <button class="cr-btn" id="cr-quick-watchlist">🔖 Watchlist</button>
     </div>
 
     <!-- Right Player & Theme Tools -->
@@ -404,7 +466,7 @@ function createAppBar() {
       <button class="cr-btn active" id="cr-auto-skip-btn" title="Toggle Auto-Skip Intro/Recap">⚡ Skip: ON</button>
       <button class="cr-btn" id="cr-speed-btn" title="Cycle Playback Speed">⏩ 1.0x</button>
       <button class="cr-btn" id="cr-pip-btn" title="Toggle Picture-in-Picture">📺 PiP</button>
-      <button class="cr-btn" id="cr-theme-btn" title="System Theme">${currentTheme === 'dark' ? '🌙 Dark' : '☀️ Light'}</button>
+      <button class="cr-btn" id="cr-theme-btn" title="Device Theme">${currentTheme === 'dark' ? '🌙 Dark' : '☀️ Light'}</button>
       <button class="cr-btn" id="cr-settings-btn" title="Quick Setup & Preferences">⚙️</button>
     </div>
 
@@ -413,6 +475,11 @@ function createAppBar() {
   `;
 
   (document.body || document.documentElement).appendChild(bar);
+
+  // Initial navigation state check
+  ipcRenderer.invoke('get-nav-state').then(state => {
+    if (state) updateNavButtons(state);
+  }).catch(() => {});
 
   // Hook Settings Button
   document.getElementById('cr-settings-btn').addEventListener('click', openSetupModal);
@@ -423,10 +490,18 @@ function createAppBar() {
   }
 
   // Hook Navigation buttons
-  document.getElementById('cr-nav-back').addEventListener('click', () => ipcRenderer.send('nav-back'));
-  document.getElementById('cr-nav-forward').addEventListener('click', () => ipcRenderer.send('nav-forward'));
-  document.getElementById('cr-nav-reload').addEventListener('click', () => ipcRenderer.send('nav-reload'));
-  document.getElementById('cr-nav-home').addEventListener('click', () => ipcRenderer.send('nav-home'));
+  document.getElementById('cr-nav-back').addEventListener('click', () => {
+    ipcRenderer.send('nav-back');
+  });
+  document.getElementById('cr-nav-forward').addEventListener('click', () => {
+    ipcRenderer.send('nav-forward');
+  });
+  document.getElementById('cr-nav-reload').addEventListener('click', () => {
+    ipcRenderer.send('nav-reload');
+  });
+  document.getElementById('cr-nav-home').addEventListener('click', () => {
+    ipcRenderer.send('nav-home');
+  });
 
   // Hook Quick Links
   document.getElementById('cr-quick-browse').addEventListener('click', () => {
@@ -498,55 +573,58 @@ function showToast(text) {
       top: 50px !important;
       right: 30px !important;
       background: rgba(15, 15, 15, 0.92) !important;
-      color: #ff6400 !important;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-      font-size: 16px !important;
-      font-weight: 700 !important;
-      padding: 10px 20px !important;
+      color: #ffffff !important;
+      padding: 10px 18px !important;
       border-radius: 8px !important;
-      border: 1px solid rgba(255, 100, 0, 0.6) !important;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7) !important;
+      font-size: 14px !important;
+      font-weight: bold !important;
+      border: 1px solid #ff6400 !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
       z-index: 2147483647 !important;
       pointer-events: none !important;
-      opacity: 0 !important;
-      transition: opacity 0.2s ease-in-out !important;
+      transition: opacity 0.3s ease !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     `;
     (document.body || document.documentElement).appendChild(toast);
   }
   toast.innerText = text;
   toast.style.opacity = '1';
-  clearTimeout(toast._hideTimeout);
-  toast._hideTimeout = setTimeout(() => {
+
+  clearTimeout(window.__crToastTimeout);
+  window.__crToastTimeout = setTimeout(() => {
     if (toast) toast.style.opacity = '0';
-  }, 1400);
+  }, 1200);
 }
 
-// Recursive helper to find all <video> elements across DOM & Shadow DOM
+// Find all video elements, including those inside Shadow DOM
 function getActiveVideos() {
   const videos = [];
-  function scan(root) {
+  function searchRoot(root) {
     if (!root) return;
     try {
-      const vids = root.querySelectorAll ? root.querySelectorAll('video') : [];
-      for (let i = 0; i < vids.length; i++) {
-        videos.push(vids[i]);
-      }
-      const allEls = root.querySelectorAll ? root.querySelectorAll('*') : [];
-      for (let i = 0; i < allEls.length; i++) {
-        if (allEls[i].shadowRoot) {
-          scan(allEls[i].shadowRoot);
+      const found = root.querySelectorAll ? root.querySelectorAll('video') : [];
+      found.forEach(v => videos.push(v));
+      const elements = root.querySelectorAll ? root.querySelectorAll('*') : [];
+      for (let i = 0; i < elements.length; i++) {
+        if (elements[i].shadowRoot) {
+          searchRoot(elements[i].shadowRoot);
         }
       }
     } catch (e) {}
   }
-  scan(document);
+  searchRoot(document);
   return videos;
 }
 
-// Attach listeners to videos for power management & rate preservation
+// Attach playback rate and state listeners to video
 function attachVideoListeners(video) {
-  if (!video || video._crAttached) return;
-  video._crAttached = true;
+  if (video.__crAttached) return;
+  video.__crAttached = true;
+
+  if (window.__crPlaybackRate) {
+    video.playbackRate = window.__crPlaybackRate;
+    video.defaultPlaybackRate = window.__crPlaybackRate;
+  }
 
   const notifyState = () => {
     try {
@@ -621,6 +699,19 @@ function handleGlobalKeyDown(e) {
     activeEl.isContentEditable ||
     activeEl.getAttribute('role') === 'textbox'
   );
+
+  // Back / Forward Keyboard Shortcuts
+  if (e.altKey && e.key === 'ArrowLeft') {
+    e.preventDefault();
+    ipcRenderer.send('nav-back');
+    return;
+  }
+  if (e.altKey && e.key === 'ArrowRight') {
+    e.preventDefault();
+    ipcRenderer.send('nav-forward');
+    return;
+  }
+
   if (isInput) return;
 
   const videos = getActiveVideos();
@@ -655,7 +746,7 @@ function handleGlobalKeyDown(e) {
       v.defaultPlaybackRate = newRate;
     });
     const speedBtn = document.getElementById('cr-speed-btn');
-    if (speedBtn) speedBtn.innerHTML = `⏩ ${nextRate}x`;
+    if (speedBtn) speedBtn.innerHTML = `⏩ ${newRate}x`;
     showToast(`Speed: ${newRate}x`);
     return;
   }
@@ -695,6 +786,3 @@ window.addEventListener('DOMContentLoaded', () => {
   const videos = getActiveVideos();
   videos.forEach(attachVideoListeners);
 });
-
-
-
