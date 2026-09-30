@@ -26,9 +26,10 @@ app.commandLine.appendSwitch('widevine-cdm-version', '4.10.2891.0');
 app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-gpu-sandbox');
 
-// Hardware acceleration and video decoding optimizations
+// Hardware acceleration, video decoding, and Picture-in-Picture optimizations
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('enable-features', 'PictureInPicture,DocumentPictureInPictureAPI');
 
 function getIconPath() {
   const iconPng = path.join(__dirname, 'resources/app/icon.png');
@@ -185,6 +186,45 @@ ipcMain.on('window-maximize', () => {
 
 ipcMain.on('window-close', () => {
   if (mainWindow) mainWindow.close();
+});
+
+let isPipWindowMode = false;
+let prePipBounds = null;
+
+ipcMain.handle('toggle-pip-window', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+
+  if (isPipWindowMode) {
+    isPipWindowMode = false;
+    mainWindow.setAlwaysOnTop(false);
+    mainWindow.setMinimumSize(800, 500);
+    if (prePipBounds) {
+      mainWindow.setBounds(prePipBounds);
+    } else {
+      mainWindow.setSize(1280, 720);
+      mainWindow.center();
+    }
+    return false;
+  } else {
+    prePipBounds = mainWindow.getBounds();
+    isPipWindowMode = true;
+    const { screen } = require('electron');
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.workAreaSize;
+
+    const pipWidth = 520;
+    const pipHeight = 300;
+
+    mainWindow.setMinimumSize(320, 180);
+    mainWindow.setBounds({
+      x: Math.round(width - pipWidth - 24),
+      y: Math.round(height - pipHeight - 24),
+      width: pipWidth,
+      height: pipHeight
+    });
+    mainWindow.setAlwaysOnTop(true, 'floating');
+    return true;
+  }
 });
 
 ipcMain.handle('get-theme-info', () => {

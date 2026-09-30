@@ -705,19 +705,7 @@ function createAppBar() {
   });
 
   // Hook PiP
-  document.getElementById('cr-pip-btn').addEventListener('click', () => {
-    const video = getActiveVideos()[0];
-    if (video) {
-      if (document.pictureInPictureElement) {
-        document.exitPictureInPicture().catch(() => {});
-        showToast('PiP: Off');
-      } else if (document.pictureInPictureEnabled && video.readyState >= 1) {
-        video.requestPictureInPicture().then(() => showToast('PiP: On')).catch(() => {});
-      }
-    } else {
-      showToast('No active video found');
-    }
-  });
+  document.getElementById('cr-pip-btn').addEventListener('click', triggerPictureInPicture);
 
   // Hook Theme Toggle directly
   document.getElementById('cr-theme-btn').addEventListener('click', () => {
@@ -735,149 +723,45 @@ function createAppBar() {
   updateNavButtons(navState);
 }
 
-// Continuous DOM Guardian
-function ensureAppBar() {
-  injectStyles();
-  if (!document.getElementById('cr-app-bar') || !document.getElementById('cr-custom-styles')) {
-    createAppBar();
-  }
-}
+// Robust Picture-in-Picture trigger (Native PiP + Floating Mini-Player Fallback)
+async function triggerPictureInPicture() {
+  const videos = getActiveVideos();
+  const video = videos.find(v => !v.paused) || videos[0];
 
-// Sleek Toast Indicator
-function showToast(text) {
-  let toast = document.getElementById('cr-toast-indicator');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'cr-toast-indicator';
-    toast.style.cssText = `
-      position: fixed !important;
-      top: 54px !important;
-      right: 24px !important;
-      background: rgba(20, 22, 28, 0.94) !important;
-      color: #ffffff !important;
-      padding: 8px 16px !important;
-      border-radius: 10px !important;
-      font-size: 13px !important;
-      font-weight: 600 !important;
-      border: 1px solid rgba(255, 100, 0, 0.5) !important;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(255, 100, 0, 0.2) !important;
-      z-index: 2147483647 !important;
-      pointer-events: none !important;
-      transition: opacity 0.25s ease, transform 0.25s ease !important;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-      backdrop-filter: blur(16px) !important;
-    `;
-    const target = document.body || document.documentElement;
-    if (target) target.appendChild(toast);
+  // 1. If native PiP is currently active, exit it
+  if (document.pictureInPictureElement) {
+    try {
+      await document.exitPictureInPicture();
+      showToast('PiP: Off');
+      return;
+    } catch (e) {}
   }
-  toast.innerText = text;
-  toast.style.opacity = '1';
-  toast.style.transform = 'translateY(0)';
 
-  clearTimeout(window.__crToastTimeout);
-  window.__crToastTimeout = setTimeout(() => {
-    if (toast) {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(-4px)';
+  // 2. Try native HTML5 Picture-in-Picture
+  if (video) {
+    try {
+      video.disablePictureInPicture = false;
+      video.removeAttribute('disablepictureinpicture');
+      if (typeof video.requestPictureInPicture === 'function') {
+        await video.requestPictureInPicture();
+        showToast('Picture-in-Picture: ON');
+        return;
+      }
+    } catch (err) {
+      console.warn('Native HTML5 PiP unavailable or blocked by DRM, activating Floating Mini-Player:', err);
     }
-  }, 1200);
-}
-
-// Video elements query
-function getActiveVideos() {
-  const videos = [];
-  function searchRoot(root) {
-    if (!root) return;
-    try {
-      const found = root.querySelectorAll ? root.querySelectorAll('video') : [];
-      found.forEach(v => videos.push(v));
-      const elements = root.querySelectorAll ? root.querySelectorAll('*') : [];
-      for (let i = 0; i < elements.length; i++) {
-        if (elements[i].shadowRoot) {
-          searchRoot(elements[i].shadowRoot);
-        }
-      }
-    } catch (e) {}
-  }
-  searchRoot(document);
-  return videos;
-}
-
-// Video listeners
-function attachVideoListeners(video) {
-  if (video.__crAttached) return;
-  video.__crAttached = true;
-
-  if (window.__crPlaybackRate) {
-    video.playbackRate = window.__crPlaybackRate;
-    video.defaultPlaybackRate = window.__crPlaybackRate;
   }
 
-  const notifyState = () => {
-    try {
-      ipcRenderer.send('playback-state-change', !video.paused && !video.ended);
-    } catch (e) {}
-  };
-
-  video.addEventListener('play', notifyState);
-  video.addEventListener('playing', notifyState);
-  video.addEventListener('pause', notifyState);
-  video.addEventListener('ended', notifyState);
-
-  video.addEventListener('ratechange', () => {
-    if (window.__crPlaybackRate && Math.abs(video.playbackRate - window.__crPlaybackRate) > 0.05) {
-      video.playbackRate = window.__crPlaybackRate;
-    }
-  });
-
-  notifyState();
-}
-
-// Auto-Skip intros and recaps
-function checkAndAutoSkip() {
-  if (!autoSkipEnabled) return;
-  function scanRoot(root) {
-    if (!root) return;
-    try {
-      const candidates = root.querySelectorAll ? root.querySelectorAll(
-        '[data-t="skip-intro-btn"], [data-t="skip-recap-btn"], [data-t="skip-button"], ' +
-        '[data-testid*="skip"], button[class*="skip"], div[class*="skip"][role="button"], ' +
-        '.vjs-skip-intro, .vjs-skip-recap, .skip-button'
-      ) : [];
-
-      for (let i = 0; i < candidates.length; i++) {
-        const btn = candidates[i];
-        if (btn && btn.offsetParent !== null && !btn.disabled) {
-          btn.click();
-          return;
-        }
-      }
-
-      const buttons = root.querySelectorAll ? root.querySelectorAll('button, div[role="button"]') : [];
-      for (let i = 0; i < buttons.length; i++) {
-        const btn = buttons[i];
-        if (btn && btn.offsetParent !== null && !btn.disabled) {
-          const txt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
-          if (txt === 'skip intro' || txt === 'skip recap' || txt === 'skip' || txt === 'skip credits') {
-            btn.click();
-            return;
-          }
-        }
-      }
-
-      const elements = root.querySelectorAll ? root.querySelectorAll('*') : [];
-      for (let i = 0; i < elements.length; i++) {
-        if (elements[i].shadowRoot) {
-          scanRoot(elements[i].shadowRoot);
-        }
-      }
-    } catch (e) {}
+  // 3. Fallback: Native Floating Mini-Player Window
+  try {
+    const isMini = await ipcRenderer.invoke('toggle-pip-window');
+    showToast(isMini ? 'Floating Mini-Player: ON' : 'Mini-Player: OFF');
+  } catch (e) {
+    showToast('No active video found');
   }
-
-  scanRoot(document);
 }
 
-// Keyboard navigation and shortcuts
+// Global Keydown Handler
 function handleGlobalKeyDown(e) {
   const activeEl = document.activeElement;
   const isInput = activeEl && (
@@ -938,19 +822,11 @@ function handleGlobalKeyDown(e) {
     return;
   }
 
-  // Picture-in-Picture: 'P'
+  // Picture-in-Picture: 'P' or 'p'
   if ((e.key === 'p' || e.key === 'P' || e.code === 'KeyP') && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    if (!video) return;
     e.stopImmediatePropagation();
     e.preventDefault();
-    if (document.pictureInPictureElement) {
-      document.exitPictureInPicture().catch(() => {});
-      showToast('PiP: Off');
-    } else if (document.pictureInPictureEnabled && video.readyState >= 1) {
-      video.requestPictureInPicture().then(() => {
-        showToast('PiP: On');
-      }).catch(() => {});
-    }
+    triggerPictureInPicture();
     return;
   }
 }
