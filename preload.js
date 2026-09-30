@@ -723,6 +723,20 @@ function createAppBar() {
   updateNavButtons(navState);
 }
 
+// Continuous DOM Guardian to ensure App Bar is always present in document.body
+function ensureAppBar() {
+  injectStyles();
+  const root = document.body || document.documentElement;
+  if (!root) return;
+
+  let bar = document.getElementById('cr-app-bar');
+  if (!bar) {
+    createAppBar();
+  } else if (document.body && bar.parentElement !== document.body) {
+    document.body.appendChild(bar);
+  }
+}
+
 // Robust Picture-in-Picture trigger (Native PiP + Floating Mini-Player Fallback)
 async function triggerPictureInPicture() {
   const videos = getActiveVideos();
