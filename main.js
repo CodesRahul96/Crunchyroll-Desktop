@@ -12,7 +12,7 @@ if (process.platform === 'linux') {
 // Ensure single instance of the application
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
-  app.quit();
+  app.exit(0);
 }
 
 let mainWindow = null;
@@ -32,6 +32,11 @@ app.commandLine.appendSwitch('widevine-cdm-version', '4.10.2891.0');
 // Linux sandbox compatibility for NTFS/external drives
 app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-gpu-sandbox');
+
+// Prevent Chromium restore / crash bubble dialogs from interrupting startup
+app.commandLine.appendSwitch('hide-crash-restore-bubble');
+app.commandLine.appendSwitch('disable-session-crashed-bubble');
+app.commandLine.appendSwitch('disable-features', 'SessionCrashedBubble');
 
 // Hardware acceleration, video decoding, and Picture-in-Picture optimizations
 app.commandLine.appendSwitch('enable-gpu-rasterization');

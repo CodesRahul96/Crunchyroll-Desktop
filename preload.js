@@ -68,13 +68,13 @@ const customStyles = `
     --cr-accent-glow: rgba(255, 100, 0, 0.2);
   }
 
-  /* Page Layout Offset to comfortably fit App Bar */
+  /* Page Layout Offset to seamlessly integrate App Bar */
   body {
-    padding-top: 42px !important;
+    padding-top: 34px !important;
   }
 
   header, [class*="header_wrapper"], [class*="erc-header"], [data-t="header-wrapper"], nav[class*="header"] {
-    top: 42px !important;
+    top: 34px !important;
   }
 
   /* Sleek Scrollbars */
@@ -91,35 +91,35 @@ const customStyles = `
     background: rgba(255, 100, 0, 0.6) !important;
   }
 
-  /* Top App Bar Glass Container */
+  /* Top App Bar Glass Container - Ultra Slim & Integrated */
   #cr-app-bar {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     width: 100vw !important;
-    height: 42px !important;
+    height: 34px !important;
     background: var(--cr-bg) !important;
     color: var(--cr-text) !important;
     border-bottom: 1px solid var(--cr-border) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 0 16px !important;
+    padding: 0 12px !important;
     box-sizing: border-box !important;
     z-index: 2147483647 !important;
     font-family: var(--cr-font) !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     user-select: none !important;
     backdrop-filter: blur(24px) saturate(180%) !important;
     -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
-    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease !important;
     opacity: 1 !important;
     visibility: visible !important;
   }
 
   #cr-app-bar.collapsed {
-    transform: translateY(-38px) !important;
+    transform: translateY(-32px) !important;
   }
 
   /* Fullscreen View: Hide App Bar entirely */
@@ -140,7 +140,7 @@ const customStyles = `
   .cr-section {
     display: flex !important;
     align-items: center !important;
-    gap: 8px !important;
+    gap: 6px !important;
   }
 
   /* Segmented Nav Capsule (Back / Forward) */
@@ -149,8 +149,8 @@ const customStyles = `
     align-items: center !important;
     background: rgba(255, 255, 255, 0.05) !important;
     border: 1px solid var(--cr-border) !important;
-    border-radius: 8px !important;
-    padding: 2px !important;
+    border-radius: 6px !important;
+    padding: 1px !important;
     gap: 1px !important;
   }
 
@@ -158,13 +158,13 @@ const customStyles = `
     background: transparent !important;
     border: none !important;
     color: var(--cr-text) !important;
-    padding: 4px 8px !important;
-    border-radius: 6px !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
     cursor: pointer !important;
     display: inline-flex !important;
     align-items: center !important;
-    gap: 4px !important;
-    font-size: 12px !important;
+    gap: 3px !important;
+    font-size: 11px !important;
     font-weight: 600 !important;
     transition: all 0.15s ease !important;
   }
@@ -185,7 +185,7 @@ const customStyles = `
 
   .cr-nav-divider {
     width: 1px !important;
-    height: 14px !important;
+    height: 12px !important;
     background: var(--cr-border) !important;
     margin: 0 1px !important;
   }
@@ -195,14 +195,14 @@ const customStyles = `
     background: rgba(255, 255, 255, 0.05) !important;
     border: 1px solid var(--cr-border) !important;
     color: var(--cr-text) !important;
-    padding: 5px 9px !important;
-    border-radius: 8px !important;
+    padding: 3px 7px !important;
+    border-radius: 6px !important;
     cursor: pointer !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 6px !important;
-    font-size: 12px !important;
+    gap: 4px !important;
+    font-size: 11.5px !important;
     font-weight: 500 !important;
     transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
@@ -223,14 +223,14 @@ const customStyles = `
     background: transparent !important;
     border: 1px solid transparent !important;
     color: var(--cr-text-dim) !important;
-    padding: 5px 11px !important;
-    border-radius: 20px !important;
-    font-size: 12px !important;
+    padding: 3px 8px !important;
+    border-radius: 14px !important;
+    font-size: 11.5px !important;
     font-weight: 600 !important;
     cursor: pointer !important;
     display: inline-flex !important;
     align-items: center !important;
-    gap: 6px !important;
+    gap: 4px !important;
     transition: all 0.15s ease !important;
   }
 
@@ -244,8 +244,8 @@ const customStyles = `
     background: rgba(255, 255, 255, 0.05) !important;
     border: 1px solid var(--cr-border) !important;
     color: var(--cr-text) !important;
-    padding: 4px 10px !important;
-    border-radius: 20px !important;
+    padding: 3px 8px !important;
+    border-radius: 14px !important;
     font-size: 11px !important;
     font-weight: 600 !important;
     cursor: pointer !important;
