@@ -16,6 +16,7 @@ if (!gotTheLock) {
 }
 
 let mainWindow = null;
+let splashWindow = null;
 let powerSaveBlockerId = null;
 let tray = null;
 let rpc = null;
@@ -52,6 +53,28 @@ function getIconPath() {
   if (process.platform === 'darwin' && fs.existsSync(iconIcns)) return iconIcns;
   if (fs.existsSync(iconPng)) return iconPng;
   return undefined;
+}
+
+// Create dedicated splash screen window for instant animation
+function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 480,
+    height: 340,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    resizable: false,
+    center: true,
+    show: true,
+    backgroundColor: '#00000000',
+    icon: getIconPath(),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+
+  splashWindow.loadFile(path.join(__dirname, 'splash.html')).catch(() => {});
 }
 
 // Setup Ad & Tracker Shield
@@ -272,12 +295,15 @@ function setupGlobalShortcuts() {
 }
 
 function createWindow() {
+  createSplashWindow();
+
   mainWindow = new BrowserWindow({
     title: 'Crunchyroll',
     width: 1280,
     height: 720,
     minWidth: 800,
     minHeight: 500,
+    show: false,
     fullscreenable: true,
     autoHideMenuBar: true,
     resizable: true,
@@ -299,6 +325,34 @@ function createWindow() {
 
   // Load Crunchyroll
   mainWindow.loadURL('https://www.crunchyroll.com');
+
+  // Once ready or timeout, smoothly transition from splash to main window
+  let windowShown = false;
+  const revealMainWindow = () => {
+    if (windowShown) return;
+    windowShown = true;
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      setTimeout(() => {
+        if (splashWindow && !splashWindow.isDestroyed()) {
+          splashWindow.close();
+          splashWindow = null;
+        }
+      }, 400);
+    }
+  };
+
+  mainWindow.once('ready-to-show', () => {
+    // Show splash animation for at least 1.2s for pleasant visual experience
+    setTimeout(revealMainWindow, 1200);
+  });
+
+  // Fallback reveal in case network is slow
+  setTimeout(revealMainWindow, 3000);
 
   // Prevent unauthorized devtools shortcuts in production
   mainWindow.webContents.on('before-input-event', (event, input) => {
