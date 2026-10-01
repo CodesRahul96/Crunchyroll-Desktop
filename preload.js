@@ -73,10 +73,6 @@ const customStyles = `
     padding-top: 34px !important;
   }
 
-  header, [class*="header_wrapper"], [class*="erc-header"], [data-t="header-wrapper"], nav[class*="header"] {
-    top: 34px !important;
-  }
-
   /* Sleek Scrollbars */
   ::-webkit-scrollbar {
     width: 6px !important;
@@ -130,10 +126,6 @@ const customStyles = `
   :fullscreen body,
   :-webkit-full-screen body {
     padding-top: 0 !important;
-  }
-  :fullscreen header,
-  :-webkit-full-screen header {
-    top: 0 !important;
   }
 
   /* Bar Sections */
