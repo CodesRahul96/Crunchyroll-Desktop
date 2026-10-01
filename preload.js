@@ -2,7 +2,9 @@ const { ipcRenderer } = require('electron');
 
 let currentTheme = 'dark';
 let autoSkipEnabled = true;
+let autoNextEnabled = true;
 let isAppBarCollapsed = false;
+let currentShader = localStorage.getItem('cr_anime_shader') || 'default';
 let navState = { canGoBack: false, canGoForward: false };
 
 // SVG Icon Pack (Minimalist, crisp vector icons)
@@ -11,12 +13,14 @@ const ICONS = {
   forward: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`,
   reload: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>`,
   home: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+  search: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
   explore: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>`,
   simulcast: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
   watchlist: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>`,
   zap: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
   speed: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
   pip: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="10" width="8" height="6" rx="1"/></svg>`,
+  palette: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>`,
   moon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
   sun: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>`,
   settings: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
@@ -24,7 +28,16 @@ const ICONS = {
   chevronDown: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`
 };
 
-// Custom CSS Injection for modern, high-end desktop experience
+// Shaders mapping
+const SHADERS = {
+  default: { name: 'Natural', filter: 'none' },
+  vibrant: { name: 'Vibrant Anime', filter: 'saturate(1.35) contrast(1.1) brightness(1.02)' },
+  crisp: { name: 'Crisp Detail', filter: 'contrast(1.2) saturate(1.12) brightness(0.98)' },
+  oled: { name: 'Cinematic OLED', filter: 'contrast(1.25) brightness(0.94) saturate(1.1)' },
+  retro: { name: 'Warm Retro', filter: 'sepia(0.2) saturate(1.2) contrast(1.08)' }
+};
+
+// Custom CSS Injection for modern desktop experience
 const customStyles = `
   :root {
     --cr-bg: rgba(15, 16, 21, 0.88);
@@ -226,10 +239,6 @@ const customStyles = `
     background: rgba(255, 255, 255, 0.06) !important;
   }
 
-  .cr-tab-link:active {
-    transform: scale(0.96) !important;
-  }
-
   /* Status Badges */
   .cr-badge-btn {
     background: rgba(255, 255, 255, 0.05) !important;
@@ -295,103 +304,80 @@ const customStyles = `
     background: var(--cr-bg-card) !important;
   }
 
-  /* Elegant Setup / Preferences Modal */
-  #cr-modal-overlay {
+  /* Command Palette Modal */
+  #cr-command-palette {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    background: rgba(0, 0, 0, 0.72) !important;
+    background: rgba(0, 0, 0, 0.75) !important;
     backdrop-filter: blur(16px) !important;
     -webkit-backdrop-filter: blur(16px) !important;
     z-index: 2147483647 !important;
     display: flex !important;
-    align-items: center !important;
+    align-items: flex-start !important;
     justify-content: center !important;
+    padding-top: 14vh !important;
     font-family: var(--cr-font) !important;
-    animation: crFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    animation: crFadeIn 0.18s ease !important;
   }
 
-  @keyframes crFadeIn {
-    from { opacity: 0; transform: scale(0.97); }
-    to { opacity: 1; transform: scale(1); }
-  }
-
-  .cr-modal-card {
+  .cr-palette-card {
     background: var(--cr-bg-card) !important;
     color: var(--cr-text) !important;
     border: 1px solid var(--cr-border) !important;
-    border-radius: 18px !important;
+    border-radius: 16px !important;
     width: 90% !important;
-    max-width: 480px !important;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+    max-width: 580px !important;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
     overflow: hidden !important;
   }
 
-  .cr-modal-header {
-    padding: 22px 24px 16px !important;
+  .cr-palette-input-box {
     display: flex !important;
     align-items: center !important;
-    justify-content: space-between !important;
+    gap: 12px !important;
+    padding: 16px 20px !important;
     border-bottom: 1px solid var(--cr-border) !important;
   }
 
-  .cr-modal-title {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-    font-size: 17px !important;
-    font-weight: 700 !important;
-    color: var(--cr-text) !important;
-  }
-
-  .cr-modal-close {
+  .cr-palette-input {
+    flex: 1 !important;
     background: transparent !important;
     border: none !important;
-    color: var(--cr-text-dim) !important;
-    font-size: 18px !important;
-    cursor: pointer !important;
-    padding: 4px 8px !important;
-    border-radius: 8px !important;
-    transition: all 0.15s ease !important;
+    outline: none !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: #ffffff !important;
+    font-family: var(--cr-font) !important;
   }
 
-  .cr-modal-close:hover {
-    color: var(--cr-text) !important;
-    background: var(--cr-bg-hover) !important;
+  .cr-palette-list {
+    max-height: 340px !important;
+    overflow-y: auto !important;
+    padding: 8px !important;
   }
 
-  .cr-modal-body {
-    padding: 20px 24px !important;
-  }
-
-  .cr-row {
+  .cr-palette-item {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 12px 0 !important;
-    border-bottom: 1px solid var(--cr-border) !important;
-  }
-
-  .cr-row:last-child {
-    border-bottom: none !important;
-  }
-
-  .cr-row-info h4 {
-    margin: 0 0 3px 0 !important;
+    padding: 10px 14px !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
     font-size: 13.5px !important;
-    font-weight: 600 !important;
+    color: var(--cr-text) !important;
+    transition: all 0.12s ease !important;
   }
 
-  .cr-row-info p {
-    margin: 0 !important;
-    font-size: 12px !important;
-    color: var(--cr-text-dim) !important;
+  .cr-palette-item:hover, .cr-palette-item.selected {
+    background: var(--cr-bg-hover) !important;
+    color: var(--cr-accent) !important;
   }
 
   .cr-shortcut-tag {
-    background: rgba(255, 255, 255, 0.07) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
     padding: 2px 7px !important;
     border-radius: 6px !important;
     border: 1px solid var(--cr-border) !important;
@@ -399,31 +385,6 @@ const customStyles = `
     font-size: 11px !important;
     color: var(--cr-accent) !important;
     font-weight: 600 !important;
-  }
-
-  .cr-modal-footer {
-    padding: 14px 24px !important;
-    background: rgba(0, 0, 0, 0.2) !important;
-    display: flex !important;
-    justify-content: flex-end !important;
-    border-top: 1px solid var(--cr-border) !important;
-  }
-
-  .cr-primary-btn {
-    background: var(--cr-accent) !important;
-    color: #ffffff !important;
-    border: none !important;
-    border-radius: 8px !important;
-    padding: 9px 18px !important;
-    font-weight: 600 !important;
-    font-size: 13px !important;
-    cursor: pointer !important;
-    transition: all 0.15s ease !important;
-  }
-
-  .cr-primary-btn:hover {
-    background: var(--cr-accent-hover) !important;
-    box-shadow: 0 4px 14px var(--cr-accent-glow) !important;
   }
 `;
 
@@ -464,6 +425,22 @@ ipcRenderer.on('nav-state-changed', (event, state) => {
   if (state) updateNavButtons(state);
 });
 
+// Apply Shader to Video
+function applyShader(shaderKey) {
+  const shader = SHADERS[shaderKey] || SHADERS.default;
+  currentShader = shaderKey;
+  localStorage.setItem('cr_anime_shader', shaderKey);
+
+  const videos = getActiveVideos();
+  videos.forEach(v => {
+    v.style.filter = shader.filter;
+  });
+
+  const shaderText = document.getElementById('cr-shader-text');
+  if (shaderText) shaderText.textContent = shader.name;
+  showToast(`Shader: ${shader.name}`);
+}
+
 // Inject styles
 function injectStyles() {
   if (document.getElementById('cr-custom-styles')) return;
@@ -474,113 +451,104 @@ function injectStyles() {
   if (target) target.appendChild(styleEl);
 }
 
-// Open Preferences Modal
-function openPreferencesModal() {
-  if (document.getElementById('cr-modal-overlay')) return;
+// Open Spotlight Command Palette (Ctrl+K)
+function openCommandPalette() {
+  if (document.getElementById('cr-command-palette')) return;
 
-  const modal = document.createElement('div');
-  modal.id = 'cr-modal-overlay';
-  modal.innerHTML = `
-    <div class="cr-modal-card">
-      <div class="cr-modal-header">
-        <div class="cr-modal-title">
-          <span>🎬</span>
-          <span>Crunchyroll Preferences</span>
-        </div>
-        <button class="cr-modal-close" id="cr-modal-close-btn">✕</button>
+  const palette = document.createElement('div');
+  palette.id = 'cr-command-palette';
+  palette.innerHTML = `
+    <div class="cr-palette-card">
+      <div class="cr-palette-input-box">
+        ${ICONS.search}
+        <input type="text" class="cr-palette-input" id="cr-search-input" placeholder="Search anime, episodes, or quick actions..." autofocus autocomplete="off" />
+        <span class="cr-shortcut-tag">ESC</span>
       </div>
-
-      <div class="cr-modal-body">
-        <div class="cr-row">
-          <div class="cr-row-info">
-            <h4>Widevine DRM Decryption</h4>
-            <p>Hardware-accelerated CDM media pipeline</p>
-          </div>
-          <span style="color: #00e676; font-weight: 600; font-size: 12px; display: flex; align-items: center; gap: 5px;">
-            <span style="width: 7px; height: 7px; background: #00e676; border-radius: 50%; box-shadow: 0 0 6px #00e676;"></span>
-            Active
-          </span>
+      <div class="cr-palette-list" id="cr-palette-results">
+        <div class="cr-palette-item" data-action="explore">
+          <span>🍿 Explore Popular Anime</span>
+          <span class="cr-shortcut-tag">Jump</span>
         </div>
-
-        <div class="cr-row">
-          <div class="cr-row-info">
-            <h4>Auto-Skip Intros & Recaps</h4>
-            <p>Automatically click skip buttons when available</p>
-          </div>
-          <button class="cr-badge-btn ${autoSkipEnabled ? 'active' : ''}" id="cr-modal-skip-toggle">
-            <span class="cr-dot"></span>
-            <span>${autoSkipEnabled ? 'Enabled' : 'Disabled'}</span>
-          </button>
+        <div class="cr-palette-item" data-action="simulcasts">
+          <span>📅 Seasonal Simulcasts</span>
+          <span class="cr-shortcut-tag">Jump</span>
         </div>
-
-        <div class="cr-row">
-          <div class="cr-row-info">
-            <h4>Appearance Theme</h4>
-            <p>Synchronize with system dark/light mode</p>
-          </div>
-          <button class="cr-icon-btn" id="cr-modal-theme-toggle">
-            ${currentTheme === 'dark' ? ICONS.moon + ' Dark' : ICONS.sun + ' Light'}
-          </button>
+        <div class="cr-palette-item" data-action="watchlist">
+          <span>🔖 My Watchlist</span>
+          <span class="cr-shortcut-tag">Jump</span>
         </div>
-
-        <div style="margin-top: 18px;">
-          <h4 style="margin: 0 0 8px 0; font-size: 12px; color: var(--cr-text-dim); text-transform: uppercase; letter-spacing: 0.5px;">Keybindings</h4>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-            <div><span class="cr-shortcut-tag">Alt + ←</span> / <span class="cr-shortcut-tag">Alt + →</span> Nav</div>
-            <div><span class="cr-shortcut-tag">[</span> / <span class="cr-shortcut-tag">]</span> Speed</div>
-            <div><span class="cr-shortcut-tag">P</span> Picture-in-Picture</div>
-            <div><span class="cr-shortcut-tag">Space</span> Play/Pause</div>
-          </div>
+        <div class="cr-palette-item" data-action="pip">
+          <span>📺 Toggle Picture-in-Picture</span>
+          <span class="cr-shortcut-tag">P</span>
         </div>
-      </div>
-
-      <div class="cr-modal-footer">
-        <button class="cr-primary-btn" id="cr-modal-done-btn">Done</button>
+        <div class="cr-palette-item" data-action="shader">
+          <span>🎨 Cycle Anime Shader Preset</span>
+          <span class="cr-shortcut-tag">Shader</span>
+        </div>
+        <div class="cr-palette-item" data-action="skip">
+          <span>⚡ Toggle Auto-Skip Intro & Recap</span>
+          <span class="cr-shortcut-tag">${autoSkipEnabled ? 'ON' : 'OFF'}</span>
+        </div>
       </div>
     </div>
   `;
 
-  const target = document.body || document.documentElement;
-  if (target) target.appendChild(modal);
+  document.body.appendChild(palette);
+  const input = document.getElementById('cr-search-input');
+  input.focus();
 
-  const closeModal = () => {
-    localStorage.setItem('cr_setup_completed_v1', 'true');
-    modal.remove();
-  };
+  const closePalette = () => palette.remove();
 
-  document.getElementById('cr-modal-close-btn').addEventListener('click', closeModal);
-  document.getElementById('cr-modal-done-btn').addEventListener('click', closeModal);
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal();
+  palette.addEventListener('click', (e) => {
+    if (e.target === palette) closePalette();
   });
 
-  const modalSkipBtn = document.getElementById('cr-modal-skip-toggle');
-  modalSkipBtn.addEventListener('click', () => {
-    autoSkipEnabled = !autoSkipEnabled;
-    modalSkipBtn.classList.toggle('active', autoSkipEnabled);
-    modalSkipBtn.querySelector('span:last-child').textContent = autoSkipEnabled ? 'Enabled' : 'Disabled';
-    const barSkipBtn = document.getElementById('cr-auto-skip-btn');
-    if (barSkipBtn) {
-      barSkipBtn.classList.toggle('active', autoSkipEnabled);
-      barSkipBtn.querySelector('span:last-child').textContent = autoSkipEnabled ? 'Skip: ON' : 'Skip: OFF';
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closePalette();
+    } else if (e.key === 'Enter') {
+      const q = input.value.trim();
+      if (q) {
+        closePalette();
+        ipcRenderer.send('nav-url', `https://www.crunchyroll.com/search?q=${encodeURIComponent(q)}`);
+      }
     }
   });
 
-  const modalThemeBtn = document.getElementById('cr-modal-theme-toggle');
-  modalThemeBtn.addEventListener('click', () => {
-    applyTheme(currentTheme !== 'dark');
-    modalThemeBtn.innerHTML = `${currentTheme === 'dark' ? ICONS.moon + ' Dark' : ICONS.sun + ' Light'}`;
+  // Action clicks
+  palette.querySelectorAll('.cr-palette-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const action = item.dataset.action;
+      closePalette();
+      if (action === 'explore') ipcRenderer.send('nav-url', 'https://www.crunchyroll.com/videos/popular');
+      if (action === 'simulcasts') ipcRenderer.send('nav-url', 'https://www.crunchyroll.com/simulcasts');
+      if (action === 'watchlist') ipcRenderer.send('nav-url', 'https://www.crunchyroll.com/watchlist');
+      if (action === 'pip') triggerPictureInPicture();
+      if (action === 'shader') cycleShader();
+      if (action === 'skip') {
+        autoSkipEnabled = !autoSkipEnabled;
+        showToast(`Auto-Skip: ${autoSkipEnabled ? 'ON' : 'OFF'}`);
+      }
+    });
   });
+}
+
+function cycleShader() {
+  const keys = Object.keys(SHADERS);
+  let idx = keys.indexOf(currentShader) + 1;
+  if (idx >= keys.length) idx = 0;
+  applyShader(keys[idx]);
 }
 
 // Create and Inject the App Bar
 function createAppBar() {
-  const target = document.body || document.documentElement;
-  if (!target) return;
+  if (!document.body) return;
 
   let bar = document.getElementById('cr-app-bar');
   if (bar) {
-    if (!target.contains(bar)) target.appendChild(bar);
+    if (bar.parentElement !== document.body) {
+      document.body.appendChild(bar);
+    }
     return;
   }
 
@@ -606,6 +574,10 @@ function createAppBar() {
       <button class="cr-icon-btn" id="cr-nav-home" title="Crunchyroll Home">
         ${ICONS.home}
       </button>
+
+      <button class="cr-icon-btn" id="cr-spotlight-btn" title="Command Palette & Search (Ctrl+K)">
+        ${ICONS.search} <span style="font-size:11px;opacity:0.8;">Ctrl+K</span>
+      </button>
     </div>
 
     <!-- Center Quick Navigation Tabs -->
@@ -621,11 +593,15 @@ function createAppBar() {
       </button>
     </div>
 
-    <!-- Right Controls: Auto-Skip, Speed, PiP, Theme, Settings -->
+    <!-- Right Controls: Auto-Skip, Shaders, Speed, PiP, Theme -->
     <div class="cr-section">
       <button class="cr-badge-btn ${autoSkipEnabled ? 'active' : ''}" id="cr-auto-skip-btn" title="Toggle Auto-Skip Intro/Recap">
         <span class="cr-dot"></span>
         <span>${autoSkipEnabled ? 'Skip: ON' : 'Skip: OFF'}</span>
+      </button>
+
+      <button class="cr-icon-btn" id="cr-shader-btn" title="Anime Video Shaders">
+        ${ICONS.palette} <span id="cr-shader-text">${SHADERS[currentShader] ? SHADERS[currentShader].name : 'Shaders'}</span>
       </button>
 
       <button class="cr-icon-btn" id="cr-speed-btn" title="Cycle Playback Speed">
@@ -639,10 +615,6 @@ function createAppBar() {
       <button class="cr-icon-btn" id="cr-theme-btn" title="Toggle Theme">
         ${currentTheme === 'dark' ? ICONS.moon : ICONS.sun}
       </button>
-
-      <button class="cr-icon-btn" id="cr-settings-btn" title="Preferences">
-        ${ICONS.settings}
-      </button>
     </div>
 
     <!-- Collapse / Expand Pill -->
@@ -651,15 +623,15 @@ function createAppBar() {
     </div>
   `;
 
-  target.appendChild(bar);
+  document.body.appendChild(bar);
 
   // Initial nav check
   ipcRenderer.invoke('get-nav-state').then(state => {
     if (state) updateNavButtons(state);
   }).catch(() => {});
 
-  // Hook Settings Button
-  document.getElementById('cr-settings-btn').addEventListener('click', openPreferencesModal);
+  // Hook Spotlight Button
+  document.getElementById('cr-spotlight-btn').addEventListener('click', openCommandPalette);
 
   // Hook Navigation
   document.getElementById('cr-nav-back').addEventListener('click', () => ipcRenderer.send('nav-back'));
@@ -687,6 +659,9 @@ function createAppBar() {
     showToast(`Auto-Skip: ${autoSkipEnabled ? 'ON' : 'OFF'}`);
   });
 
+  // Hook Shader Cycle
+  document.getElementById('cr-shader-btn').addEventListener('click', cycleShader);
+
   // Hook Speed
   const speedBtn = document.getElementById('cr-speed-btn');
   speedBtn.addEventListener('click', () => {
@@ -707,7 +682,7 @@ function createAppBar() {
   // Hook PiP
   document.getElementById('cr-pip-btn').addEventListener('click', triggerPictureInPicture);
 
-  // Hook Theme Toggle directly
+  // Hook Theme Toggle
   document.getElementById('cr-theme-btn').addEventListener('click', () => {
     applyTheme(currentTheme !== 'dark');
   });
@@ -723,18 +698,222 @@ function createAppBar() {
   updateNavButtons(navState);
 }
 
-// Continuous DOM Guardian to ensure App Bar is always present in document.body
+// Continuous DOM Guardian
 function ensureAppBar() {
   injectStyles();
-  const root = document.body || document.documentElement;
-  if (!root) return;
+  if (!document.body) return;
 
   let bar = document.getElementById('cr-app-bar');
   if (!bar) {
     createAppBar();
-  } else if (document.body && bar.parentElement !== document.body) {
+  } else if (bar.parentElement !== document.body) {
     document.body.appendChild(bar);
   }
+}
+
+// Sleek Toast Indicator
+function showToast(text) {
+  let toast = document.getElementById('cr-toast-indicator');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'cr-toast-indicator';
+    toast.style.cssText = `
+      position: fixed !important;
+      top: 54px !important;
+      right: 24px !important;
+      background: rgba(20, 22, 28, 0.94) !important;
+      color: #ffffff !important;
+      padding: 8px 16px !important;
+      border-radius: 10px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      border: 1px solid rgba(255, 100, 0, 0.5) !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(255, 100, 0, 0.2) !important;
+      z-index: 2147483647 !important;
+      pointer-events: none !important;
+      transition: opacity 0.25s ease, transform 0.25s ease !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+      backdrop-filter: blur(16px) !important;
+    `;
+    if (document.body) document.body.appendChild(toast);
+  }
+  toast.innerText = text;
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateY(0)';
+
+  clearTimeout(window.__crToastTimeout);
+  window.__crToastTimeout = setTimeout(() => {
+    if (toast) {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-4px)';
+    }
+  }, 1200);
+}
+
+// Video elements query
+function getActiveVideos() {
+  const videos = [];
+  function searchRoot(root) {
+    if (!root) return;
+    try {
+      const found = root.querySelectorAll ? root.querySelectorAll('video') : [];
+      found.forEach(v => {
+        try {
+          v.disablePictureInPicture = false;
+          v.removeAttribute('disablepictureinpicture');
+          if (SHADERS[currentShader]) v.style.filter = SHADERS[currentShader].filter;
+        } catch (e) {}
+        videos.push(v);
+      });
+      const elements = root.querySelectorAll ? root.querySelectorAll('*') : [];
+      for (let i = 0; i < elements.length; i++) {
+        if (elements[i].shadowRoot) {
+          searchRoot(elements[i].shadowRoot);
+        }
+      }
+    } catch (e) {}
+  }
+  searchRoot(document);
+  videos.sort((a, b) => (!b.paused ? 1 : 0) - (!a.paused ? 1 : 0));
+  return videos;
+}
+
+// Attach playback rate and state listeners to video
+function attachVideoListeners(video) {
+  if (video.__crAttached) return;
+  video.__crAttached = true;
+
+  if (window.__crPlaybackRate) {
+    video.playbackRate = window.__crPlaybackRate;
+    video.defaultPlaybackRate = window.__crPlaybackRate;
+  }
+  if (SHADERS[currentShader]) {
+    video.style.filter = SHADERS[currentShader].filter;
+  }
+
+  const notifyState = () => {
+    const isPlaying = !video.paused && !video.ended;
+    try {
+      ipcRenderer.send('playback-state-change', isPlaying);
+    } catch (e) {}
+
+    // Discord RPC & Media Session Sync
+    syncMediaSessionAndRPC(video);
+  };
+
+  video.addEventListener('play', notifyState);
+  video.addEventListener('playing', notifyState);
+  video.addEventListener('pause', notifyState);
+  video.addEventListener('ended', notifyState);
+  video.addEventListener('timeupdate', notifyState);
+
+  notifyState();
+}
+
+// Extract Anime Info & Sync with Discord RPC & Media Session
+let lastRpcUpdate = 0;
+function syncMediaSessionAndRPC(video) {
+  const now = Date.now();
+  if (now - lastRpcUpdate < 4000) return; // Throttle updates
+  lastRpcUpdate = now;
+
+  let title = '';
+  let show = '';
+
+  const titleEl = document.querySelector('[data-t="episode-title"], .episode-title, h1[class*="title"]');
+  const showEl = document.querySelector('[data-t="show-title"], .show-title, a[class*="show-title"]');
+
+  if (titleEl) title = (titleEl.innerText || '').trim();
+  if (showEl) show = (showEl.innerText || '').trim();
+
+  if (!title) {
+    const docTitle = document.title || '';
+    title = docTitle.replace(' - Watch on Crunchyroll', '').replace('Watch on Crunchyroll', '').trim();
+  }
+
+  const isPlaying = video ? (!video.paused && !video.ended) : false;
+  const currentTime = video ? video.currentTime : 0;
+  const duration = video ? video.duration : 0;
+
+  // Sync with OS MediaSession (Zorin OS / GNOME widget)
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: title || 'Crunchyroll Anime',
+      artist: show || 'Crunchyroll',
+      album: show || 'Crunchyroll Anime',
+      artwork: [
+        { src: 'https://www.crunchyroll.com/build/assets/img/favicons/favicon-512x512.png', sizes: '512x512', type: 'image/png' }
+      ]
+    });
+
+    navigator.mediaSession.setActionHandler('play', () => { if (video) video.play(); });
+    navigator.mediaSession.setActionHandler('pause', () => { if (video) video.pause(); });
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (video && details.seekTime) video.currentTime = details.seekTime;
+    });
+  }
+
+  // Send update to Discord RPC in main process
+  ipcRenderer.send('update-discord-rpc', {
+    details: show ? `${show}` : 'Watching Anime',
+    state: title ? `${title}` : 'Crunchyroll Desktop',
+    isPlaying: isPlaying,
+    currentTime: currentTime,
+    duration: duration,
+    watchUrl: window.location.href
+  });
+}
+
+// Auto-Skip Intro, Recap, & Auto-Next Episode
+function checkAndAutoSkip() {
+  function scanRoot(root) {
+    if (!root) return;
+    try {
+      // 1. Skip Intro / Recap
+      if (autoSkipEnabled) {
+        const skipButtons = root.querySelectorAll ? root.querySelectorAll(
+          '[data-t="skip-intro-btn"], [data-t="skip-recap-btn"], [data-t="skip-button"], ' +
+          '[data-testid*="skip"], button[class*="skip"], div[class*="skip"][role="button"], ' +
+          '.vjs-skip-intro, .vjs-skip-recap, .skip-button'
+        ) : [];
+
+        for (let i = 0; i < skipButtons.length; i++) {
+          const btn = skipButtons[i];
+          if (btn && btn.offsetParent !== null && !btn.disabled) {
+            btn.click();
+            return;
+          }
+        }
+      }
+
+      // 2. Smart Auto-Next Episode
+      if (autoNextEnabled) {
+        const nextButtons = root.querySelectorAll ? root.querySelectorAll(
+          '[data-t="next-episode-btn"], [data-testid*="next-episode"], button[class*="next-episode"], ' +
+          '.next-episode-btn, [data-t="play-next-btn"]'
+        ) : [];
+
+        for (let i = 0; i < nextButtons.length; i++) {
+          const btn = nextButtons[i];
+          if (btn && btn.offsetParent !== null && !btn.disabled) {
+            btn.click();
+            showToast('Auto-Playing Next Episode...');
+            return;
+          }
+        }
+      }
+
+      const elements = root.querySelectorAll ? root.querySelectorAll('*') : [];
+      for (let i = 0; i < elements.length; i++) {
+        if (elements[i].shadowRoot) {
+          scanRoot(elements[i].shadowRoot);
+        }
+      }
+    } catch (e) {}
+  }
+
+  scanRoot(document);
 }
 
 // Robust Picture-in-Picture trigger (Native PiP + Floating Mini-Player Fallback)
@@ -742,7 +921,6 @@ async function triggerPictureInPicture() {
   const videos = getActiveVideos();
   const video = videos.find(v => !v.paused) || videos[0];
 
-  // 1. If native PiP is currently active, exit it
   if (document.pictureInPictureElement) {
     try {
       await document.exitPictureInPicture();
@@ -751,7 +929,6 @@ async function triggerPictureInPicture() {
     } catch (e) {}
   }
 
-  // 2. Try native HTML5 Picture-in-Picture
   if (video) {
     try {
       video.disablePictureInPicture = false;
@@ -762,11 +939,10 @@ async function triggerPictureInPicture() {
         return;
       }
     } catch (err) {
-      console.warn('Native HTML5 PiP unavailable or blocked by DRM, activating Floating Mini-Player:', err);
+      console.warn('Native HTML5 PiP fallback to Floating Mini-Player:', err);
     }
   }
 
-  // 3. Fallback: Native Floating Mini-Player Window
   try {
     const isMini = await ipcRenderer.invoke('toggle-pip-window');
     showToast(isMini ? 'Floating Mini-Player: ON' : 'Mini-Player: OFF');
@@ -775,7 +951,47 @@ async function triggerPictureInPicture() {
   }
 }
 
-// Global Keydown Handler
+// Global Media Key IPC Handlers from Main process
+ipcRenderer.on('media-play-pause', () => {
+  const video = getActiveVideos()[0];
+  if (video) {
+    if (video.paused) video.play();
+    else video.pause();
+    showToast(video.paused ? '⏸ Paused' : '▶ Playing');
+  }
+});
+
+ipcRenderer.on('media-next', () => {
+  const nextBtn = document.querySelector('[data-t="next-episode-btn"], button[class*="next-episode"]');
+  if (nextBtn) {
+    nextBtn.click();
+    showToast('Next Episode');
+  } else {
+    const video = getActiveVideos()[0];
+    if (video) {
+      video.currentTime += 10;
+      showToast('+10s');
+    }
+  }
+});
+
+ipcRenderer.on('media-prev', () => {
+  const video = getActiveVideos()[0];
+  if (video) {
+    video.currentTime = Math.max(0, video.currentTime - 10);
+    showToast('-10s');
+  }
+});
+
+ipcRenderer.on('media-mute', () => {
+  const video = getActiveVideos()[0];
+  if (video) {
+    video.muted = !video.muted;
+    showToast(video.muted ? '🔇 Muted' : '🔊 Unmuted');
+  }
+});
+
+// Keyboard navigation and shortcuts
 function handleGlobalKeyDown(e) {
   const activeEl = document.activeElement;
   const isInput = activeEl && (
@@ -784,6 +1000,13 @@ function handleGlobalKeyDown(e) {
     activeEl.isContentEditable ||
     activeEl.getAttribute('role') === 'textbox'
   );
+
+  // Command Palette: Ctrl+K / Cmd+K
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    openCommandPalette();
+    return;
+  }
 
   // Back / Forward Keyboard Shortcuts
   if (e.altKey && e.key === 'ArrowLeft') {
@@ -849,7 +1072,7 @@ function handleGlobalKeyDown(e) {
 window.addEventListener('keydown', handleGlobalKeyDown, true);
 document.addEventListener('keydown', handleGlobalKeyDown, true);
 
-// Run initial injection
+// Initial DOM Setup
 ensureAppBar();
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -862,7 +1085,7 @@ window.addEventListener('load', () => {
   ensureAppBar();
 });
 
-// Periodic observer
+// Periodic observer loop
 setInterval(() => {
   ensureAppBar();
   const videos = getActiveVideos();

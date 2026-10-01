@@ -17,33 +17,38 @@
 
 - 🌐 **True Cross-Platform**: Optimized packages for **Linux** (AppImage, Deb), **Windows** (Installer & Portable .exe), and **macOS** (DMG & Zip).
 - 🔓 **Widevine DRM Out-of-the-Box**: Bundled DRM support for smooth playback of protected anime streams without browser restrictions.
-- 🎨 **Interactive App Bar**:
-  - **Navigation**: Instant `◀` Back, `▶` Forward, `🔄` Reload, and `🏠` Home buttons.
+- 🎮 **Discord Rich Presence (RPC)**: Automatically broadcasts anime title, episode name, poster art, and live elapsed/remaining countdown to your Discord profile.
+- 🔍 **Universal Command Palette (`Ctrl + K`)**: Spotlight-style quick search popup for anime titles, navigation links, and settings.
+- 🎨 **Anime Visual Enhancer (Shaders)**: Built-in real-time video color presets (*Vibrant Anime*, *Crisp Detail*, *Cinematic OLED*, *Warm Retro*) with persistent preference storage.
+- 📥 **System Tray & Background Playback**: Minimize or close to system tray with quick context menu controls.
+- 🎵 **OS Media Widget & Global Media Keys**: Full integration with Zorin OS / GNOME media player widgets, lock screens, and hardware keyboard media keys (`Play/Pause`, `Next`, `Prev`).
+- 🛡️ **Built-in Ad & Tracker Shield**: Blocks video ads, analytics trackers, and telemetry scripts automatically.
+- 🧭 **Glassmorphic App Bar**:
+  - **Segmented Navigation**: Instant `◀ Back` (Alt+←), `Forward ▶` (Alt+→), `🔄 Reload`, and `🏠 Home` buttons with live history detection.
   - **Quick Links**: Direct shortcuts for **Explore**, **Simulcasts**, and **Watchlist**.
-  - **Toolbar Controls**: Speed cycling button, Picture-in-Picture trigger, and Auto-Skip toggle.
-  - **Smart Collapse**: Minimizable with a single click and automatically hides in fullscreen playback.
-- 🌓 **Live Device Theme Sync**: Automatically detects and adapts to your OS Dark Mode or Light Mode (with special styling for Zorin OS & GNOME themes).
-- ⚡ **Enhanced Player Controls**:
-  - **Playback Speed**: Adjust speed dynamically in 0.25x steps (`[` and `]`) from 0.25x to 3.0x with on-screen visual toast.
-  - **Picture-in-Picture (PiP)**: Pop video out into a floating, resizable window (`P`).
+  - **Player Controls**: Speed cycling button, Picture-in-Picture trigger, and Auto-Skip toggle.
+- ⚡ **Enhanced Player Automation**:
   - **Auto-Skip**: Automatically detects and triggers "Skip Intro" and "Skip Recap" prompts.
+  - **Smart Auto-Next**: Automatically queues and plays next episodes seamlessly.
+  - **Playback Speed**: Adjust speed dynamically in 0.25x steps (`[` and `]`) from 0.25x to 3.0x with on-screen visual toast.
+  - **Picture-in-Picture (PiP)**: Dual-tier engine supporting native HTML5 PiP and Always-on-Top Floating Mini-Player window (`P`).
 - 💤 **Power-Save Blocker**: Prevents system display sleep or screensavers while watching an episode.
 - 🔒 **Zero-Reset Updates**: Account login, cookies, and watch history are completely preserved across all updates and restarts.
-- 📌 **Taskbar & Dock Pinning**: Window grouping (`StartupWMClass`) properly associates with your pinned taskbar launcher in Zorin OS, Ubuntu, Windows, and macOS.
 
 ---
 
-## ⌨️ Player Shortcuts
+## ⌨️ Player & Navigation Shortcuts
 
 | Shortcut | Description |
 | :--- | :--- |
-| **`[`** | Decrease playback speed (down to 0.25x) |
-| **`]`** | Increase playback speed (up to 3.0x) |
-| **`P`** | Toggle Picture-in-Picture (PiP) mode |
+| **`Ctrl + K`** / **`Cmd + K`** | Open Spotlight Command Palette & Quick Search |
+| **`Alt + ←`** / **`Alt + →`** | Navigate Page Back / Forward |
+| **`[`** / **`]`** | Decrease / Increase playback speed (0.25x - 3.0x) |
+| **`P`** | Toggle Picture-in-Picture / Floating Mini-Player |
 | **`Space`** / **`K`** | Play / Pause video |
 | **`F`** | Toggle Fullscreen mode |
 | **`M`** | Mute / Unmute audio |
-| **`▲` / `▼`** | Expand / Collapse the top App Bar |
+| **`Media Keys`** | Hardware Play/Pause, Next Track (+10s/Next), Prev Track (-10s) |
 
 ---
 

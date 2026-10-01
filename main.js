@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker, nativeTheme } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker, nativeTheme, session, Tray, Menu, nativeImage, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -17,6 +17,13 @@ if (!gotTheLock) {
 
 let mainWindow = null;
 let powerSaveBlockerId = null;
+let tray = null;
+let rpc = null;
+let rpcReady = false;
+let isPipWindowMode = false;
+let prePipBounds = null;
+
+const DISCORD_CLIENT_ID = '1150493863777599548';
 
 // Widevine CDM configuration for DRM streaming
 app.commandLine.appendSwitch('widevine-cdm-path', path.join(__dirname, 'WidevineCdm'));
@@ -40,6 +47,223 @@ function getIconPath() {
   if (process.platform === 'darwin' && fs.existsSync(iconIcns)) return iconIcns;
   if (fs.existsSync(iconPng)) return iconPng;
   return undefined;
+}
+
+// Setup Ad & Tracker Shield
+function setupAdBlocker() {
+  const AD_FILTER = {
+    urls: [
+      '*://*.doubleclick.net/*',
+      '*://*.googlesyndication.com/*',
+      '*://*.google-analytics.com/*',
+      '*://*.scorecardresearch.com/*',
+      '*://*.quantserve.com/*',
+      '*://*.adservice.google.com/*',
+      '*://*.amazon-adsystem.com/*',
+      '*://*.criteo.com/*',
+      '*://*.taboola.com/*',
+      '*://*.outbrain.com/*',
+      '*://*.adroll.com/*',
+      '*://*.popads.net/*',
+      '*://*.braze.com/*',
+      '*://*.branch.io/*',
+      '*://*.appboy.com/*',
+      '*://*.adjust.com/*',
+      '*://*.vungle.com/*',
+      '*://*.flashtalking.com/*'
+    ]
+  };
+  try {
+    session.defaultSession.webRequest.onBeforeRequest(AD_FILTER, (details, callback) => {
+      callback({ cancel: true });
+    });
+  } catch (e) {}
+}
+
+// Discord Rich Presence Setup
+function initDiscordRPC() {
+  try {
+    let DiscordRPC;
+    try {
+      DiscordRPC = require('discord-rpc');
+    } catch (e) {
+      return;
+    }
+
+    DiscordRPC.register(DISCORD_CLIENT_ID);
+    rpc = new DiscordRPC.Client({ transport: 'ipc' });
+
+    rpc.on('ready', () => {
+      rpcReady = true;
+      updateDiscordPresence({
+        details: 'Browsing Anime',
+        state: 'Crunchyroll Desktop'
+      });
+    });
+
+    rpc.on('error', () => {
+      rpcReady = false;
+    });
+
+    rpc.login({ clientId: DISCORD_CLIENT_ID }).catch(() => {
+      rpcReady = false;
+    });
+  } catch (err) {
+    rpcReady = false;
+  }
+}
+
+function updateDiscordPresence(data) {
+  if (!rpc || !rpcReady) return;
+  try {
+    const presence = {
+      details: data.details || 'Watching Anime',
+      state: data.state || 'Crunchyroll',
+      largeImageKey: 'crunchyroll_logo',
+      largeImageText: 'Crunchyroll Desktop',
+      instance: false
+    };
+
+    if (data.isPlaying && data.duration && data.currentTime) {
+      presence.startTimestamp = Math.floor(Date.now() - (data.currentTime * 1000));
+      presence.endTimestamp = Math.floor(Date.now() + ((data.duration - data.currentTime) * 1000));
+      presence.smallImageKey = 'play';
+      presence.smallImageText = 'Playing';
+    } else if (data.isPlaying) {
+      presence.startTimestamp = Math.floor(Date.now());
+      presence.smallImageKey = 'play';
+      presence.smallImageText = 'Playing';
+    } else {
+      presence.smallImageKey = 'pause';
+      presence.smallImageText = 'Paused';
+    }
+
+    if (data.watchUrl && data.watchUrl.startsWith('http')) {
+      presence.buttons = [
+        { label: 'Watch on Crunchyroll', url: data.watchUrl }
+      ];
+    }
+
+    rpc.setActivity(presence).catch(() => {});
+  } catch (e) {}
+}
+
+// System Tray Configuration
+function setupTray() {
+  if (tray) return;
+  const iconPath = getIconPath();
+  if (!iconPath) return;
+
+  try {
+    let trayIcon = nativeImage.createFromPath(iconPath);
+    if (process.platform === 'linux' || process.platform === 'win32') {
+      trayIcon = trayIcon.resize({ width: 22, height: 22 });
+    }
+
+    tray = new Tray(trayIcon);
+    tray.setToolTip('Crunchyroll Desktop');
+
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Show Crunchyroll',
+        click: () => {
+          if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.show();
+            mainWindow.focus();
+          }
+        }
+      },
+      { type: 'separator' },
+      {
+        label: '▶ Play / ⏸ Pause',
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('media-play-pause');
+        }
+      },
+      {
+        label: '⏭ Next Episode',
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('media-next');
+        }
+      },
+      {
+        label: '🔇 Mute / Unmute',
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('media-mute');
+        }
+      },
+      { type: 'separator' },
+      {
+        label: '🍿 Explore Popular',
+        click: () => {
+          if (mainWindow) mainWindow.loadURL('https://www.crunchyroll.com/videos/popular');
+        }
+      },
+      {
+        label: '📅 Simulcasts',
+        click: () => {
+          if (mainWindow) mainWindow.loadURL('https://www.crunchyroll.com/simulcasts');
+        }
+      },
+      {
+        label: '🔖 Watchlist',
+        click: () => {
+          if (mainWindow) mainWindow.loadURL('https://www.crunchyroll.com/watchlist');
+        }
+      },
+      { type: 'separator' },
+      {
+        label: '⚙️ Preferences',
+        click: () => {
+          if (mainWindow) {
+            mainWindow.show();
+            mainWindow.webContents.send('open-preferences');
+          }
+        }
+      },
+      {
+        label: '🚪 Quit',
+        click: () => {
+          app.isQuitting = true;
+          app.quit();
+        }
+      }
+    ]);
+
+    tray.setContextMenu(contextMenu);
+    tray.on('click', () => {
+      if (mainWindow) {
+        if (mainWindow.isVisible() && !mainWindow.isMinimized()) {
+          mainWindow.hide();
+        } else {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      }
+    });
+  } catch (err) {
+    console.warn('System tray notice:', err);
+  }
+}
+
+// Global Media Key Handlers
+function setupGlobalShortcuts() {
+  try {
+    globalShortcut.register('MediaPlayPause', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('media-play-pause');
+    });
+    globalShortcut.register('MediaNextTrack', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('media-next');
+    });
+    globalShortcut.register('MediaPreviousTrack', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('media-prev');
+    });
+    globalShortcut.register('MediaStop', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('media-stop');
+    });
+  } catch (e) {}
 }
 
 function createWindow() {
@@ -82,7 +306,7 @@ function createWindow() {
     }
   });
 
-  // Handle external links: open non-Crunchyroll URLs in the user's default browser
+  // Handle external links
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     try {
       const parsedUrl = new URL(url);
@@ -100,7 +324,7 @@ function createWindow() {
     return { action: 'allow' };
   });
 
-  // Handle mouse Back / Forward navigation buttons
+  // Mouse Back / Forward navigation
   mainWindow.on('app-command', (e, cmd) => {
     if (cmd === 'browser-backward' && mainWindow.webContents.canGoBack()) {
       mainWindow.webContents.goBack();
@@ -121,6 +345,14 @@ function createWindow() {
 
   mainWindow.webContents.on('did-navigate', sendNavState);
   mainWindow.webContents.on('did-navigate-in-page', sendNavState);
+
+  mainWindow.on('close', (event) => {
+    if (!app.isQuitting) {
+      // Keep running in tray on Linux/Windows/Mac
+      event.preventDefault();
+      mainWindow.hide();
+    }
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -188,9 +420,7 @@ ipcMain.on('window-close', () => {
   if (mainWindow) mainWindow.close();
 });
 
-let isPipWindowMode = false;
-let prePipBounds = null;
-
+// Floating Mini-Player IPC
 ipcMain.handle('toggle-pip-window', () => {
   if (!mainWindow || mainWindow.isDestroyed()) return false;
 
@@ -234,11 +464,19 @@ ipcMain.handle('get-theme-info', () => {
   };
 });
 
+ipcMain.on('update-discord-rpc', (event, data) => {
+  updateDiscordPresence(data);
+});
+
 // App Lifecycle
 app.whenReady().then(() => {
   nativeTheme.themeSource = 'system';
   
+  setupAdBlocker();
   createWindow();
+  setupTray();
+  setupGlobalShortcuts();
+  initDiscordRPC();
 
   nativeTheme.on('updated', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -252,6 +490,9 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
+    } else if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
     }
   });
 });
@@ -259,7 +500,15 @@ app.whenReady().then(() => {
 app.on('second-instance', () => {
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
     mainWindow.focus();
+  }
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+  if (rpc) {
+    try { rpc.destroy(); } catch (e) {}
   }
 });
 
@@ -268,4 +517,3 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
-
