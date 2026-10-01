@@ -750,37 +750,47 @@ function showToast(text) {
   }, 1200);
 }
 
-// Video elements query
+// Video elements query (Optimized, non-blocking)
 function getActiveVideos() {
-  const videos = [];
-  function searchRoot(root) {
-    if (!root) return;
-    try {
-      const found = root.querySelectorAll ? root.querySelectorAll('video') : [];
-      found.forEach(v => {
+  try {
+    const directVideos = Array.from(document.querySelectorAll('video'));
+    if (directVideos.length > 0) {
+      directVideos.forEach(v => {
         try {
           v.disablePictureInPicture = false;
           v.removeAttribute('disablepictureinpicture');
           if (SHADERS[currentShader]) v.style.filter = SHADERS[currentShader].filter;
         } catch (e) {}
-        videos.push(v);
       });
-      const elements = root.querySelectorAll ? root.querySelectorAll('*') : [];
-      for (let i = 0; i < elements.length; i++) {
-        if (elements[i].shadowRoot) {
-          searchRoot(elements[i].shadowRoot);
+      directVideos.sort((a, b) => (!b.paused ? 1 : 0) - (!a.paused ? 1 : 0));
+      return directVideos;
+    }
+    
+    // Check shadow DOM on common player containers only
+    const playerContainers = document.querySelectorAll('[class*="video-player"], [class*="player"], [id*="player"]');
+    for (let i = 0; i < playerContainers.length; i++) {
+      const el = playerContainers[i];
+      if (el.shadowRoot) {
+        const shadowVideos = Array.from(el.shadowRoot.querySelectorAll('video'));
+        if (shadowVideos.length > 0) {
+          shadowVideos.forEach(v => {
+            try {
+              v.disablePictureInPicture = false;
+              v.removeAttribute('disablepictureinpicture');
+              if (SHADERS[currentShader]) v.style.filter = SHADERS[currentShader].filter;
+            } catch (e) {}
+          });
+          return shadowVideos;
         }
       }
-    } catch (e) {}
-  }
-  searchRoot(document);
-  videos.sort((a, b) => (!b.paused ? 1 : 0) - (!a.paused ? 1 : 0));
-  return videos;
+    }
+  } catch (e) {}
+  return [];
 }
 
 // Attach playback rate and state listeners to video
 function attachVideoListeners(video) {
-  if (video.__crAttached) return;
+  if (!video || video.__crAttached) return;
   video.__crAttached = true;
 
   if (window.__crPlaybackRate) {
@@ -865,55 +875,35 @@ function syncMediaSessionAndRPC(video) {
   });
 }
 
-// Auto-Skip Intro, Recap, & Auto-Next Episode
+// Auto-Skip Intro, Recap, & Auto-Next Episode (Targeted and efficient)
 function checkAndAutoSkip() {
-  function scanRoot(root) {
-    if (!root) return;
-    try {
-      // 1. Skip Intro / Recap
-      if (autoSkipEnabled) {
-        const skipButtons = root.querySelectorAll ? root.querySelectorAll(
-          '[data-t="skip-intro-btn"], [data-t="skip-recap-btn"], [data-t="skip-button"], ' +
-          '[data-testid*="skip"], button[class*="skip"], div[class*="skip"][role="button"], ' +
-          '.vjs-skip-intro, .vjs-skip-recap, .skip-button'
-        ) : [];
-
-        for (let i = 0; i < skipButtons.length; i++) {
-          const btn = skipButtons[i];
-          if (btn && btn.offsetParent !== null && !btn.disabled) {
-            btn.click();
-            return;
-          }
-        }
+  try {
+    // 1. Skip Intro / Recap
+    if (autoSkipEnabled) {
+      const skipBtn = document.querySelector(
+        '[data-t="skip-intro-btn"], [data-t="skip-recap-btn"], [data-t="skip-button"], ' +
+        '[data-testid*="skip"], button[class*="skip"], div[class*="skip"][role="button"], ' +
+        '.vjs-skip-intro, .vjs-skip-recap, .skip-button'
+      );
+      if (skipBtn && skipBtn.offsetParent !== null && !skipBtn.disabled) {
+        skipBtn.click();
+        return;
       }
+    }
 
-      // 2. Smart Auto-Next Episode
-      if (autoNextEnabled) {
-        const nextButtons = root.querySelectorAll ? root.querySelectorAll(
-          '[data-t="next-episode-btn"], [data-testid*="next-episode"], button[class*="next-episode"], ' +
-          '.next-episode-btn, [data-t="play-next-btn"]'
-        ) : [];
-
-        for (let i = 0; i < nextButtons.length; i++) {
-          const btn = nextButtons[i];
-          if (btn && btn.offsetParent !== null && !btn.disabled) {
-            btn.click();
-            showToast('Auto-Playing Next Episode...');
-            return;
-          }
-        }
+    // 2. Smart Auto-Next Episode
+    if (autoNextEnabled) {
+      const nextBtn = document.querySelector(
+        '[data-t="next-episode-btn"], [data-testid*="next-episode"], button[class*="next-episode"], ' +
+        '.next-episode-btn, [data-t="play-next-btn"]'
+      );
+      if (nextBtn && nextBtn.offsetParent !== null && !nextBtn.disabled) {
+        nextBtn.click();
+        showToast('Auto-Playing Next Episode...');
+        return;
       }
-
-      const elements = root.querySelectorAll ? root.querySelectorAll('*') : [];
-      for (let i = 0; i < elements.length; i++) {
-        if (elements[i].shadowRoot) {
-          scanRoot(elements[i].shadowRoot);
-        }
-      }
-    } catch (e) {}
-  }
-
-  scanRoot(document);
+    }
+  } catch (e) {}
 }
 
 // Robust Picture-in-Picture trigger (Native PiP + Floating Mini-Player Fallback)
@@ -1085,10 +1075,11 @@ window.addEventListener('load', () => {
   ensureAppBar();
 });
 
-// Periodic observer loop
+// Periodic observer loop with lightweight check (every 1000ms instead of heavy 400ms scan)
 setInterval(() => {
   ensureAppBar();
   const videos = getActiveVideos();
   videos.forEach(attachVideoListeners);
   checkAndAutoSkip();
-}, 400);
+}, 1000);
+

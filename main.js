@@ -324,12 +324,30 @@ function createWindow() {
     return { action: 'allow' };
   });
 
+  function checkCanGoBack() {
+    if (!mainWindow || mainWindow.isDestroyed()) return false;
+    if (mainWindow.webContents.navigationHistory) {
+      return mainWindow.webContents.navigationHistory.canGoBack();
+    }
+    return mainWindow.webContents.canGoBack ? mainWindow.webContents.canGoBack() : false;
+  }
+
+  function checkCanGoForward() {
+    if (!mainWindow || mainWindow.isDestroyed()) return false;
+    if (mainWindow.webContents.navigationHistory) {
+      return mainWindow.webContents.navigationHistory.canGoForward();
+    }
+    return mainWindow.webContents.canGoForward ? mainWindow.webContents.canGoForward() : false;
+  }
+
   // Mouse Back / Forward navigation
   mainWindow.on('app-command', (e, cmd) => {
-    if (cmd === 'browser-backward' && mainWindow.webContents.canGoBack()) {
-      mainWindow.webContents.goBack();
-    } else if (cmd === 'browser-forward' && mainWindow.webContents.canGoForward()) {
-      mainWindow.webContents.goForward();
+    if (cmd === 'browser-backward' && checkCanGoBack()) {
+      if (mainWindow.webContents.navigationHistory) mainWindow.webContents.navigationHistory.goBack();
+      else mainWindow.webContents.goBack();
+    } else if (cmd === 'browser-forward' && checkCanGoForward()) {
+      if (mainWindow.webContents.navigationHistory) mainWindow.webContents.navigationHistory.goForward();
+      else mainWindow.webContents.goForward();
     }
   });
 
@@ -337,8 +355,8 @@ function createWindow() {
   const sendNavState = () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('nav-state-changed', {
-        canGoBack: mainWindow.webContents.canGoBack(),
-        canGoForward: mainWindow.webContents.canGoForward()
+        canGoBack: checkCanGoBack(),
+        canGoForward: checkCanGoForward()
       });
     }
   };
@@ -379,29 +397,42 @@ ipcMain.on('playback-state-change', (event, isPlaying) => {
 
 // Window Navigation & Control IPCs
 ipcMain.on('nav-back', () => {
-  if (mainWindow && mainWindow.webContents.canGoBack()) mainWindow.webContents.goBack();
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.webContents.navigationHistory && mainWindow.webContents.navigationHistory.canGoBack()) {
+    mainWindow.webContents.navigationHistory.goBack();
+  } else if (mainWindow.webContents.canGoBack && mainWindow.webContents.canGoBack()) {
+    mainWindow.webContents.goBack();
+  }
 });
 
 ipcMain.on('nav-forward', () => {
-  if (mainWindow && mainWindow.webContents.canGoForward()) mainWindow.webContents.goForward();
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.webContents.navigationHistory && mainWindow.webContents.navigationHistory.canGoForward()) {
+    mainWindow.webContents.navigationHistory.goForward();
+  } else if (mainWindow.webContents.canGoForward && mainWindow.webContents.canGoForward()) {
+    mainWindow.webContents.goForward();
+  }
 });
 
 ipcMain.on('nav-reload', () => {
-  if (mainWindow) mainWindow.webContents.reload();
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.reload();
 });
 
 ipcMain.on('nav-home', () => {
-  if (mainWindow) mainWindow.loadURL('https://www.crunchyroll.com');
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('https://www.crunchyroll.com');
 });
 
 ipcMain.on('nav-url', (event, url) => {
-  if (mainWindow) mainWindow.loadURL(url);
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL(url);
 });
 
 ipcMain.handle('get-nav-state', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return { canGoBack: false, canGoForward: false };
+  const canBack = mainWindow.webContents.navigationHistory ? mainWindow.webContents.navigationHistory.canGoBack() : (mainWindow.webContents.canGoBack ? mainWindow.webContents.canGoBack() : false);
+  const canFwd = mainWindow.webContents.navigationHistory ? mainWindow.webContents.navigationHistory.canGoForward() : (mainWindow.webContents.canGoForward ? mainWindow.webContents.canGoForward() : false);
   return {
-    canGoBack: mainWindow ? mainWindow.webContents.canGoBack() : false,
-    canGoForward: mainWindow ? mainWindow.webContents.canGoForward() : false
+    canGoBack: canBack,
+    canGoForward: canFwd
   };
 });
 
