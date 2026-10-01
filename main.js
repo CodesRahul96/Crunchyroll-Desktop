@@ -423,6 +423,22 @@ function createWindow() {
   mainWindow.webContents.on('did-navigate', sendNavState);
   mainWindow.webContents.on('did-navigate-in-page', sendNavState);
 
+  // Handle renderer crashes & unresponsiveness gracefully
+  mainWindow.webContents.on('render-process-gone', (event, details) => {
+    console.warn('Renderer process gone:', details.reason);
+    if (details.reason !== 'clean-exit' && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.reload();
+    }
+  });
+
+  mainWindow.on('unresponsive', () => {
+    console.warn('Crunchyroll window temporarily unresponsive.');
+  });
+
+  mainWindow.on('responsive', () => {
+    console.log('Crunchyroll window responsive again.');
+  });
+
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
       // Keep running in tray on Linux/Windows/Mac
@@ -439,6 +455,15 @@ function createWindow() {
     }
   });
 }
+
+// Global exception safety guards to prevent unhandled crash exits
+process.on('uncaughtException', (err) => {
+  console.error('Unhandled Exception caught safely:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Promise Rejection caught safely:', reason);
+});
 
 // Power save management during playback
 ipcMain.on('playback-state-change', (event, isPlaying) => {

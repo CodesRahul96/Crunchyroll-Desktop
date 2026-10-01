@@ -378,111 +378,6 @@ const customStyles = `
     color: var(--cr-accent) !important;
     font-weight: 600 !important;
   }
-
-  /* Cinematic Crunchyroll Splash Screen */
-  #cr-splash-screen {
-    position: fixed !important;
-    inset: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    background: #000000 !important;
-    z-index: 2147483647 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s ease !important;
-    user-select: none !important;
-    pointer-events: all !important;
-  }
-
-  #cr-splash-screen.fade-out {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-  }
-
-  .cr-splash-logo-box {
-    position: relative !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    animation: crSplashPop 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-  }
-
-  .cr-splash-glow {
-    position: absolute !important;
-    width: 160px !important;
-    height: 160px !important;
-    background: radial-gradient(circle, rgba(255, 100, 0, 0.45) 0%, rgba(255, 100, 0, 0) 70%) !important;
-    border-radius: 50% !important;
-    filter: blur(20px) !important;
-    animation: crSplashGlow 2s infinite alternate ease-in-out !important;
-  }
-
-  .cr-splash-logo-svg {
-    width: 80px !important;
-    height: 80px !important;
-    filter: drop-shadow(0 0 25px rgba(255, 100, 0, 0.65)) !important;
-    z-index: 2 !important;
-    animation: crSplashRotate 1.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  }
-
-  .cr-splash-title {
-    margin-top: 18px !important;
-    font-size: 20px !important;
-    font-weight: 800 !important;
-    letter-spacing: 2px !important;
-    text-transform: uppercase !important;
-    color: #ffffff !important;
-    font-family: var(--cr-font) !important;
-    z-index: 2 !important;
-  }
-
-  .cr-splash-title span {
-    color: var(--cr-accent) !important;
-  }
-
-  .cr-splash-loader {
-    margin-top: 24px !important;
-    width: 140px !important;
-    height: 3px !important;
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-radius: 4px !important;
-    overflow: hidden !important;
-    position: relative !important;
-    z-index: 2 !important;
-  }
-
-  .cr-splash-loader-bar {
-    position: absolute !important;
-    height: 100% !important;
-    width: 40% !important;
-    background: linear-gradient(90deg, #ff6400, #ff9e00) !important;
-    border-radius: 4px !important;
-    animation: crSplashLoading 1.4s infinite ease-in-out !important;
-  }
-
-  @keyframes crSplashPop {
-    0% { transform: scale(0.7); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  @keyframes crSplashRotate {
-    0% { transform: rotate(-30deg) scale(0.8); }
-    100% { transform: rotate(0deg) scale(1); }
-  }
-
-  @keyframes crSplashGlow {
-    0% { transform: scale(0.85); opacity: 0.5; }
-    100% { transform: scale(1.25); opacity: 0.9; }
-  }
-
-  @keyframes crSplashLoading {
-    0% { left: -40%; }
-    50% { left: 100%; }
-    100% { left: -40%; }
-  }
 `;
 
 // Initialize Theme
@@ -1155,52 +1050,11 @@ function handleGlobalKeyDown(e) {
   }
 }
 
-// Show Crunchyroll Splash Screen Animation
-function showSplashScreen() {
-  if (document.getElementById('cr-splash-screen')) return;
-  injectStyles();
-  const splash = document.createElement('div');
-  splash.id = 'cr-splash-screen';
-  splash.innerHTML = `
-    <div class="cr-splash-logo-box">
-      <div class="cr-splash-glow"></div>
-      <svg class="cr-splash-logo-svg" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="10" fill="#FF6400"/>
-        <path d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM12 6.5C15.0376 6.5 17.5 8.96243 17.5 12C17.5 15.0376 15.0376 17.5 12 17.5C8.96243 17.5 6.5 15.0376 6.5 12C6.5 8.96243 8.96243 6.5 12 6.5Z" fill="#FF7C24"/>
-        <circle cx="10" cy="12" r="5" fill="#FFFFFF"/>
-        <circle cx="10" cy="12" r="2.8" fill="#FF6400"/>
-      </svg>
-      <div class="cr-splash-title">Crunchy<span>roll</span></div>
-      <div class="cr-splash-loader">
-        <div class="cr-splash-loader-bar"></div>
-      </div>
-    </div>
-  `;
-  const target = document.body || document.documentElement;
-  if (target) target.appendChild(splash);
-
-  // Auto-dismiss splash when page is ready or fallback timer
-  const dismissSplash = () => {
-    const el = document.getElementById('cr-splash-screen');
-    if (el && !el.classList.contains('fade-out')) {
-      el.classList.add('fade-out');
-      setTimeout(() => el.remove(), 650);
-    }
-  };
-
-  // Wait for initial render and dismiss
-  window.addEventListener('load', () => {
-    setTimeout(dismissSplash, 900);
-  });
-  setTimeout(dismissSplash, 2400);
-}
-
 // Global event listeners
 window.addEventListener('keydown', handleGlobalKeyDown, true);
 document.addEventListener('keydown', handleGlobalKeyDown, true);
 
-// Initial DOM Setup & Splash Screen
-showSplashScreen();
+// Initial DOM Setup
 ensureAppBar();
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -1220,5 +1074,6 @@ setInterval(() => {
   videos.forEach(attachVideoListeners);
   checkAndAutoSkip();
 }, 1000);
+
 
 
